@@ -163,7 +163,7 @@ async function renderContents(el) {
 async function renderBooks(el) {
   const js = await store.journeys();
   const cur = journey()?.id;
-  const cards = [];
+  const cards = [], spines = [];
   for (const j of js) {
     const seqs = (await store.sequences(j.id)).filter(s => s.de?.length && s.en?.length);
     const p = await store.progress(j.id);
@@ -176,6 +176,7 @@ async function renderBooks(el) {
       const day = (await store.list(store.jpath(j.id, 'batches/'))).filter(x => /-texts-/.test(x)).map(x => x.split('/').pop().slice(0, 10)).sort().pop();
       if (day) { const d = Math.round((Date.now() - new Date(day + 'T12:00:00').getTime()) / 86400000); added = d <= 0 ? 'today' : d === 1 ? 'yesterday' : ago(Date.now() - d * 86400000); }
     }
+    spines.push({ id: j.id, title: j.title, part: seqs.length ? told / seqs.length : 0, book: j.pages ? Math.min(1, upTo / j.pages) : 0, current: j.id === cur });
     cards.push(`<div class="bookcard ${j.id === cur ? 'current' : ''}" data-id="${esc(j.id)}">
       <h3>${esc(j.title)}</h3>
       <div class="meta">${j.author ? esc(j.author) + ' · ' : ''}${told} of ${seqs.length} parts told · pages prepared: ${upTo}${j.pages ? ' of ' + j.pages : ''}</div>
@@ -188,6 +189,14 @@ async function renderBooks(el) {
     </div>`);
   }
   el.innerHTML = `<h2>My books</h2><p class="hint">Every book is a journey. Grandma remembers your place in each one.</p>
+    ${spines.length ? `<div class="shelf">${spines.map((b, k) => {
+      const hue = [322, 18, 200, 150, 262, 40][[...b.id].reduce((n, c) => n + c.charCodeAt(0), 0) % 6];
+      return `<button class="spine ${b.current ? 'current' : ''}" data-spine="${esc(b.id)}" title="${esc(b.title)}: open this journey" style="--hue:${hue}; height:${150 + (k * 37 + b.title.length * 7) % 46}px">
+        <span class="ribbon" style="height:${Math.round(14 + b.part * 70)}%" title="How far you have listened"></span>
+        <span class="spine-title">${esc(b.title)}</span>
+        <span class="spine-fill" style="height:${Math.round(b.book * 100)}%" title="How much of the book is prepared"></span>
+      </button>`; }).join('')}<span class="shelf-end"></span></div>
+    <p class="hint">The ribbon shows how far you have listened. The darker band at the foot shows how much of the book is prepared.</p>` : ''}
     <div class="books">${cards.join('') || '<p>No books yet.</p>'}</div>
     <div class="step"><h3>Add a book</h3>
       <p class="hint">Any PDF or text file. It is read here in your browser. The book itself is not uploaded anywhere; only your place, your texts and your pictures are saved.</p>
@@ -196,6 +205,7 @@ async function renderBooks(el) {
     </div>
     <div class="step"><h3>Try it first</h3><p class="hint">Three short parts from the opening of Momo, retold by Grandma, with picture prompts and one example picture. Add your own Momo file afterwards to prepare more pages.</p><button id="bk-sample" class="btn">Load the Momo sample</button></div>`;
 
+  el.querySelectorAll('[data-spine]').forEach(b => { b.onclick = async () => { await ctx.selectJourney(b.dataset.spine); render(); }; });
   el.querySelectorAll('.bookcard').forEach(card => {
     const id = card.dataset.id;
     const upd = async patch => { const j = await store.journey(id); await store.saveJourney({ ...j, ...patch }); if (id === journey()?.id) Object.assign(journey(), patch); };
@@ -503,6 +513,8 @@ async function renderSettings(el) {
       ${earsSupported ? '' : '<div class="note warn">This browser cannot listen. Use Chrome, Edge or Safari for voice. The buttons do everything too.</div>'}
       <div class="row"><label>I speak to her in <select id="st-mic"><option value="en-US" ${s.micLang === 'en-US' ? 'selected' : ''}>English (US)</option><option value="en-GB" ${s.micLang === 'en-GB' ? 'selected' : ''}>English (UK)</option><option value="en-IN" ${s.micLang === 'en-IN' ? 'selected' : ''}>English (India)</option><option value="de-DE" ${s.micLang === 'de-DE' ? 'selected' : ''}>Deutsch</option></select></label></div>
       <p><label class="check"><input type="checkbox" id="st-wait" ${s.waitForMe ? 'checked' : ''}> After each part she waits until I say “and then?” (otherwise she goes on by herself)</label></p>
+      <p><label class="check"><input type="checkbox" id="st-sounds" ${s.sounds ? 'checked' : ''}> Quiet room sounds (a fire, a clock, a page turning, a teacup)</label></p>
+      <p><label class="check"><input type="checkbox" id="st-drift" ${s.drift ? 'checked' : ''}> The picture moves very slowly while she tells (it stops when you point at it)</label></p>
       <p><label class="check"><input type="checkbox" id="st-glue" ${s.glue ? 'checked' : ''}> She says small things between the two tellings (“And now in English, dear.”)</label></p>
       <p class="hint">Switch words: “${SWITCH.tea}” opens the tea room for free chat, “${SWITCH.story}” goes back to the book. With loudspeakers the microphone also hears Grandma, so she ignores most commands while she is speaking. Headphones make voice control much more reliable.</p>
       ${localAIAvailable() ? `<p><label class="check"><input type="checkbox" id="st-ai" ${s.localAI ? 'checked' : ''}> In the tea room, let the small AI built into this Chrome answer free questions (runs on this computer, free, no key; experimental)</label></p>` : ''}
@@ -540,6 +552,8 @@ async function renderSettings(el) {
   $('#st-mic').onchange = e => { save({ micLang: e.target.value }); if (ctx.ears.on) { ctx.ears.stop(); ctx.setMic(true); } };
   $('#st-wait').onchange = e => save({ waitForMe: e.target.checked });
   $('#st-glue').onchange = e => save({ glue: e.target.checked });
+  $('#st-sounds').onchange = e => { save({ sounds: e.target.checked }); ctx.ambience(); };
+  $('#st-drift').onchange = e => save({ drift: e.target.checked });
   if ($('#st-ai')) $('#st-ai').onchange = e => save({ localAI: e.target.checked });
   el.querySelectorAll('input[name=be]').forEach(r => { r.onchange = () => { save({ backend: r.value }); $('#st-gh').hidden = r.value !== 'github'; $('#st-folder').hidden = r.value !== 'folder'; }; });
   for (const [id, key] of [['gh-owner', 'ghOwner'], ['gh-repo', 'ghRepo'], ['gh-branch', 'ghBranch'], ['gh-token', 'ghToken']]) $('#' + id).onchange = e => save({ [key]: e.target.value.trim() });

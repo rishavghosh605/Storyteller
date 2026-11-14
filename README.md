@@ -51,6 +51,8 @@ Pictures:
 
 In the read-along panel, tap a line to hear the story from there.
 
+While she tells, the picture is the stage and Grandma sits small beside it; when she speaks to you, she comes forward. German words that are also written on the picture glow in the speech cloud. The room follows your clock (morning, afternoon, evening, night), and quiet room sounds can be switched off in Settings. Words you tap for their meaning go into your word jar: in the tea room, press **My words**. At the end of a chapter she shows all its pictures together.
+
 **Contents** (the "Part 3 of 18" chip at the top) lists every part under the book's chapters, with its picture and a short description once it has been told. Tap a part to hear it. **Last one** makes the current part the last for tonight: Grandma finishes it, says good night and dozes off.
 
 ## Where things are saved

@@ -42,6 +42,7 @@ export const DEFAULTS = {
   slowDe: false,
   cloud: true, meanings: false, mic: false, micLang: 'en-US',
   waitForMe: true, glue: true, localAI: false,
+  drift: true, sounds: true,   // the picture moves a little; quiet room sounds
   swapSides: false,
   current: '',                 // current journey id
 };

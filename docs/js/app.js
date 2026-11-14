@@ -2,10 +2,11 @@
 import * as store from './store.js';
 import * as voice from './voice.js';
 import { Ears, understand, earsSupported } from './ears.js';
-import { StoryRoom } from './story.js';
+import { StoryRoom, GLUE } from './story.js';
 import * as tea from './tea.js';
 import { SWITCH, ago } from './format.js';
 import { lookup } from './words.js';
+import * as sounds from './sounds.js';
 import { initPanels, openSheet, closeSheet, sheetOpen } from './panels.js';
 
 const $ = s => document.querySelector(s);
@@ -51,10 +52,25 @@ const stage = {
   outOfPages: () => setAnswers([['Bring new pages', () => openSheet('texts')]]),
   lastOne: () => S.lastOne,
   sleep: goToSleep,
+  chapterEnd,
 };
 const story = new StoryRoom(stage);
 
 // ---------- speaking ----------
+// Is this German word one of the words written on the picture of this part?
+function onPicture(word, seq) {
+  if (!seq || !S.hasPicture) return false;
+  const w = word.toLowerCase().replace(/^[^\p{L}]+|[^\p{L}]+$/gu, '');
+  if (w.length < 3) return false;
+  const labels = [...(seq.labels || []), ...(seq.nouns || []).map(n => n.de)];
+  return labels.some(l => {
+    const t = String(l).toLowerCase().replace(/\(.*?\)/g, '').replace(/^(der|die|das|ein|eine)\s+/, '').trim().split(/\s+/)[0] || '';
+    if (t.length < 3) return false;
+    if (t === w) return true;
+    const [a, b] = t.length <= w.length ? [t, w] : [w, t];
+    return a.length >= 4 && b.startsWith(a) && b.length - a.length <= 2; // plural and case endings
+  });
+}
 function renderCloud(words, lang, meta) {
   const cloud = $('#cloud');
   cloud.hidden = false;
@@ -62,7 +78,8 @@ function renderCloud(words, lang, meta) {
   $('#cloud-dots').hidden = true;
   $('#cloud-lang').textContent = meta.seq ? (lang === 'de' ? 'Deutsch' : 'English') : '';
   $('#cloud-text').scrollTop = 0;
-  $('#cloud-text').innerHTML = words.map((w, i) => `<span class="w" data-i="${i}" data-lang="${lang}">${esc(w)} </span>`).join('');
+  const tags = lang === 'de' && meta.seq;
+  $('#cloud-text').innerHTML = words.map((w, i) => `<span class="w${tags && onPicture(w, meta.seq) ? ' tag' : ''}" data-i="${i}" data-lang="${lang}">${esc(w)} </span>`).join('');
   S.cloudMeta = { lang, seq: meta.seq || null };
 }
 let mouthTimer = null;
@@ -92,6 +109,10 @@ async function say(text, lang, meta = {}) {
   markTexts(meta, lang);
   S.speaking = true; S.speakingText = text;
   body.classList.add('speaking'); body.classList.remove('listening');
+  // While she tells the story, the picture is the stage and she sits small beside it.
+  // When she speaks to me directly, she comes forward again.
+  if (meta.seq) body.classList.toggle('stage-picture', !!S.hasPicture);
+  else if (!meta.glue || meta.toYou) body.classList.remove('stage-picture');
   const de = lang === 'de';
   // A story line is one breath. Her own longer remarks are spoken sentence by sentence.
   const parts = meta.seq ? [text] : voice.sentences(text);
@@ -164,16 +185,37 @@ export async function imageURL(path) {
   return url;
 }
 let shown = '';
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+let turning = 0;
 async function showPicture(seq, moment) {
   const paper = $('#paper'), img = $('#picture');
   const t = seq.title || {};
-  $('#caption').textContent = [t.de, t.en].filter(Boolean).join('  ·  ');
+  const caption = [t.de, t.en].filter(Boolean).join('  ·  ');
   const path = await store.imagePath(story.journey.id, seq.n);
   const url = await imageURL(path);
-  $('#no-picture').hidden = !!url; img.hidden = !url; paper.classList.toggle('empty', !url);
-  if (url && img.getAttribute('src') !== url) img.src = url;
-  if (moment && shown !== seq.n + url) { paper.classList.remove('reveal'); void paper.offsetWidth; paper.classList.add('reveal'); }
-  shown = seq.n + url;
+  const key = seq.n + url;
+  S.hasPicture = !!url;
+  const apply = () => {
+    $('#caption').textContent = caption;
+    $('#no-picture').hidden = !!url; img.hidden = !url; paper.classList.toggle('empty', !url);
+    if (url && img.getAttribute('src') !== url) img.src = url;
+  };
+  if (moment && shown && shown !== key) {
+    // A new part: the old picture turns away like a page, and the new one turns in.
+    const my = ++turning;
+    paper.classList.remove('turn-in', 'reveal'); paper.classList.add('turn-out');
+    sounds.pageTurn();
+    $('#grandma').classList.remove('turning'); void $('#grandma').getBoundingClientRect(); $('#grandma').classList.add('turning');
+    await sleep(420);
+    if (my !== turning) return !!url;
+    apply();
+    paper.classList.remove('turn-out'); void paper.offsetWidth; paper.classList.add('turn-in');
+    setTimeout(() => { if (my === turning) paper.classList.remove('turn-in'); }, 700);
+  } else {
+    apply();
+    if (moment && shown !== key) { paper.classList.remove('reveal'); void paper.offsetWidth; paper.classList.add('reveal'); }
+  }
+  shown = key;
   return !!url;
 }
 
@@ -212,10 +254,28 @@ async function greet() {
   ask({ yes: begin, no: later }, [[g.kind === 'fresh' ? 'Yes, let us start' : 'Yes, go on', begin], ['Not yet', later, true]]);
 }
 
+// The keepsake at the end of a chapter: a closing line and all its pictures together.
+async function chapterEnd(chapter, parts) {
+  const pics = [];
+  for (const q of parts) { const url = await imageURL(await store.imagePath(story.journey.id, q.n)); if (url) pics.push({ url, q }); }
+  const album = $('#album');
+  if (pics.length) {
+    $('#album-title').textContent = chapter?.title || 'This chapter';
+    $('#album-grid').innerHTML = pics.map(({ url, q }) => `<figure><img src="${url}" alt=""><figcaption>${esc(q.title?.en || '')}</figcaption></figure>`).join('');
+    album.hidden = false;
+  }
+  const r = await say(pick(pics.length ? GLUE.chapter : GLUE.chapterPlain), 'en', { glue: true, toYou: true });
+  if (r === 'stopped') { album.hidden = true; return true; }
+  await listenWait(cfg.waitForMe ? 0 : 9000);
+  album.hidden = true;
+  return true; // she has already asked whether to go on
+}
+
 // Bedtime: after her good night she dozes off again, and the place is kept.
 function goToSleep() {
   S.lastOne = false; S.awake = false;
   clearAsk();
+  ambience();
   setTimeout(() => { if (!S.awake) { body.classList.add('asleep'); $('#cloud').hidden = true; } }, 1400);
   updateControls(); updateTop();
   store.sync().catch(() => {});
@@ -224,20 +284,31 @@ function goToSleep() {
 function goPart(n) {
   if (!story.seq(n)) return;
   closeSheet();
-  if (!S.awake) { S.awake = true; body.classList.remove('asleep'); voice.unlock(); if (cfg.mic && !ears.on) ears.start(cfg.micLang); }
+  if (!S.awake) { S.awake = true; body.classList.remove('asleep'); voice.unlock(); sounds.unlock(); ambience(); if (cfg.mic && !ears.on) ears.start(cfg.micLang); }
   if (S.room !== 'story') setRoom('story');
   clearAsk();
   story.goTo(n);
   story.play();
 }
 
+// ---------- the room follows the clock ----------
+function timeOfDay(h = new Date().getHours()) { return h >= 6 && h < 11 ? 'morning' : h >= 11 && h < 17 ? 'afternoon' : h >= 17 && h < 21 ? 'evening' : 'night'; }
+function setTime() {
+  const t = timeOfDay();
+  if (S.time !== t) { ['morning', 'afternoon', 'evening', 'night'].forEach(x => body.classList.toggle('time-' + x, x === t)); S.time = t; }
+  ambience();
+}
+function ambience() { sounds.ambience(S.awake ? S.room : 'off', S.time || timeOfDay()); }
+
 // ---------- rooms ----------
 function setRoom(room) {
   S.room = room;
+  if (room === 'tea') body.classList.remove('stage-picture');
   body.classList.toggle('room-tea', room === 'tea');
   body.classList.toggle('room-story', room === 'story');
   $('#room-label').textContent = room === 'tea' ? SWITCH.story : SWITCH.tea;
   $('#btn-room').querySelector('[data-icon]').innerHTML = icon(room === 'tea' ? 'book' : 'tea');
+  ambience();
   $('#btn-room').title = room === 'tea' ? `Back to the story (say "${SWITCH.story}")` : `Put the book down and chat (say "${SWITCH.tea}")`;
   updateTop();
 }
@@ -246,6 +317,7 @@ async function enterTea() {
   story.pause(); clearAsk();
   setRoom('tea');
   $('#btn-ask-claude').hidden = true;
+  sounds.clink();
   await say(tea.enterLine(), 'en', {});
 }
 async function enterStory() {
@@ -261,6 +333,7 @@ async function teaHear(text) {
   text = text.trim();
   if (!text) return;
   $('#btn-ask-claude').hidden = true;
+  if (/\b(my words|word jar|words i (asked|tapped|looked)|meine w(ö|o)rter|vocabulary|vokabeln)\b/i.test(text)) { wordJar(); return; }
   const view = story.view(); // read-only copy: the tea room cannot touch the story
   let r = tea.reply(text, view);
   if (!r && cfg.localAI && tea.localAIAvailable()) {
@@ -426,6 +499,48 @@ async function showMeaning(el, n) {
   if (!hit) { pop.hidden = true; return; }
   pop.innerHTML = `<b>${esc(hit.word)}</b>${hit.meaning ? ' = ' + esc(hit.meaning) : ''}<small>${esc(hit.source)}</small>`;
   place();
+  if (hit.meaning) keepWord(el, hit, seq);
+}
+
+// ---------- the word jar ----------
+// Every word I tap for its meaning is kept, with the line it came from.
+// It lives in its own file. The tea room reads it; the story never does.
+const jarPath = () => store.jpath(story.journey.id, 'words.json');
+async function keepWord(el, hit, seq) {
+  if (!story.journey) return;
+  const lang = el.dataset.lang || 'de';
+  const w = el.textContent.trim().replace(/^[^\p{L}]+|[^\p{L}]+$/gu, '');
+  if (!w) return;
+  const line = el.closest('p')?.textContent.trim() || $('#cloud-text').textContent.trim();
+  const jar = (await store.getJSON(jarPath())) || [];
+  const old = jar.find(x => x.w.toLowerCase() === w.toLowerCase() && x.lang === lang);
+  if (old) { old.count = (old.count || 1) + 1; old.at = Date.now(); }
+  else jar.push({ w, m: hit.meaning, lang, n: seq?.n || 0, line, at: Date.now(), seen: 0, count: 1 });
+  await store.putJSON(jarPath(), jar, { lazy: true });
+}
+async function wordJar() {
+  if (!story.journey) return;
+  if (S.room !== 'tea') { await enterTea(); if (S.room !== 'tea') return; }
+  $('#btn-ask-claude').hidden = true;
+  const jar = (await store.getJSON(jarPath())) || [];
+  if (!jar.length) { say('Your word jar is still empty, my dear. Switch on the meanings and tap a word while I tell. I will keep every one for you.', 'en', {}); return; }
+  // Three at a time: the ones we have looked at least, oldest first.
+  const few = [...jar].sort((a, b) => (a.seen || 0) - (b.seen || 0) || a.at - b.at).slice(0, 3);
+  const steps = [[pick(['Ahh, your words. Let us look at a few.', 'Hmm, yes. Let me take a few out of your jar.']), 'en']];
+  few.forEach((x, i) => {
+    steps.push([i ? pick(['Here is another of yours.', 'And this one.']) : 'You asked me about this one.', 'en']);
+    steps.push([x.w, x.lang]);
+    steps.push([`That means: ${x.m}.`, 'en']);
+    if (x.line && x.line.split(/\s+/).length > 1) { steps.push(['I said it like this.', 'en']); steps.push([x.line, x.lang]); }
+  });
+  steps.push([jar.length > few.length ? `That is enough for now. There are ${jar.length - few.length} more in your jar for another day.` : 'And that is your whole jar, my dear. Well done.', 'en']);
+  for (const [text, lang] of steps) {
+    const r = await say(text, lang, {});
+    if (r === 'stopped' || S.room !== 'tea') return;
+    await pause(lang === 'de' ? 500 : 250);
+  }
+  few.forEach(x => { x.seen = Date.now(); });
+  await store.putJSON(jarPath(), jar, { lazy: true });
 }
 
 // ---------- chrome ----------
@@ -449,6 +564,7 @@ function updateControls() {
   $('#btn-mic').classList.toggle('live', !!ears.live);
   $('#btn-texts').classList.toggle('on', !$('#texts').hidden);
   body.classList.toggle('no-cloud', !cfg.cloud);
+  body.classList.toggle('drift', !!cfg.drift);
   body.classList.toggle('meanings', cfg.meanings);
   if (ears.error) { toast(ears.error, 6000); ears.error = ''; }
 }
@@ -499,7 +615,7 @@ async function refresh() {
 async function wake() {
   if (S.awake) return;
   S.awake = true;
-  voice.unlock();
+  voice.unlock(); sounds.unlock(); ambience();
   body.classList.remove('asleep');
   await voice.whenVoicesReady();
   if (cfg.mic && !ears.on) ears.start(cfg.micLang);
@@ -551,6 +667,8 @@ function wire() {
   document.addEventListener('pointerdown', () => voice.unlock(), { once: true });
   $('#picture').onclick = () => { const lb = $('#lightbox'); lb.querySelector('img').src = $('#picture').src; lb.hidden = false; };
   $('#lightbox').onclick = () => { $('#lightbox').hidden = true; };
+  $('#album').onclick = () => { if (!nudge()) $('#album').hidden = true; };
+  $('#btn-jar').onclick = () => wordJar();
 
   document.addEventListener('keydown', e => {
     if (e.target.matches('input, textarea, select')) return;
@@ -598,6 +716,7 @@ async function boot(again) {
   await selectJourney(id);
   if (again) return;
   setRoom('story'); syncBadge();
+  setTime(); setInterval(setTime, 5 * 60000);
   if (cfg.backend !== 'browser') store.sync().catch(() => {});
   voice.whenVoicesReady();
   // If the microphone was allowed before, she can already hear a "hello" while dozing.
@@ -606,7 +725,7 @@ async function boot(again) {
   }
 }
 
-export const ctx = { goPart, paintIcons, icon, story, selectJourney, refresh, toast, copy, hush, imageURL, say, setMic, updateControls, ears, understand };
+export const ctx = { ambience, goPart, paintIcons, icon, story, selectJourney, refresh, toast, copy, hush, imageURL, say, setMic, updateControls, ears, understand };
 wire();
 initPanels(ctx);
 boot();

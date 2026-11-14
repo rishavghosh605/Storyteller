@@ -10,6 +10,12 @@ export const GLUE = {
   toEn: ['Hmm. And now once more, in English.', 'So. Now let me tell you that again, in English, dear.', 'Ahh. And in English, it goes like this.'],
   toDe: ['And now, listen how it sounds in German.', 'Hmm. Now the same in German, nice and slowly.', 'So. And now in German, my dear.'],
   picture: ['Look, dear. I have a picture for this part.', 'Ahh, here. Look at this one first.', 'Hmm, wait. First the picture. Look.'],
+  chapter: [
+    'And that, my dear, is the end of the chapter. Look, here are all our pictures from it. Shall we go on to the next one?',
+    'Ahh. A whole chapter, you and I. See, these are the pictures we met on the way. Shall I begin the next chapter?',
+    'Hmm. There the chapter closes, dear. Look how much we have seen. Shall we turn to the next one?',
+  ],
+  chapterPlain: ['And that, my dear, is the end of the chapter. Shall we go on to the next one?', 'Ahh. There the chapter closes, dear. Shall I begin the next one?'],
   goOn: ['Shall I go on, dear?', 'Hmm. Shall we turn the page?', 'And then? Shall I tell you?'],
   noMore: ['Ahh. That is as far as my pages go, my dear. Bring me new ones, and I will tell you more.'],
   night: [
@@ -63,6 +69,12 @@ export class StoryRoom {
     const start = this.journey.startLang || 'de';
     return this.index(seq.n) % 2 === 0 ? [start, other(start)] : [other(start), start];
   }
+  // Which chapter of the book a part belongs to (-1: before the first chapter, or chapters unknown).
+  chapterOf(seq) {
+    let c = -1;
+    (this.journey?.chapters || []).forEach((ch, k) => { if (seq?.pages && ch.page <= seq.pages[0]) c = k; });
+    return c;
+  }
   get atStart() { return this.index(this.p.seq) <= 0 && !this.p.part && !this.p.line; }
 
   save() {
@@ -101,7 +113,7 @@ export class StoryRoom {
     try {
       while (live()) {
         const seq = this.current;
-        if (!seq) { await st.say(pick(GLUE.noMore), 'en', { glue: true }); st.outOfPages?.(); break; }
+        if (!seq) { await st.say(pick(GLUE.noMore), 'en', { glue: true, toYou: true }); st.outOfPages?.(); break; }
         const order = this.order(seq);
         st.onPlace?.();
         if (!this.p.part && !this.p.line && this.shownPicture !== seq.n) {
@@ -142,13 +154,19 @@ export class StoryRoom {
         if (st.lastOne?.()) {
           // Bedtime: she finishes the part, says good night and dozes off. No question.
           await st.pause(700);
-          await st.say(pick(GLUE.night), 'en', { glue: true });
+          await st.say(pick(GLUE.night), 'en', { glue: true, toYou: true });
           if (live()) { this.playing = false; st.sleep?.(); }
           return;
         }
-        if (!next) { await st.pause(600); await st.say(pick(GLUE.noMore), 'en', { glue: true }); st.outOfPages?.(); break; }
+        if (!next) { await st.pause(600); await st.say(pick(GLUE.noMore), 'en', { glue: true, toYou: true }); st.outOfPages?.(); break; }
         await st.pause(500);
-        if (await st.say(pick(GLUE.goOn), 'en', { glue: true }) === 'stopped') return;
+        // A chapter is finished: she closes it with a few words and shows its pictures together.
+        if (this.chapterOf(seq) !== this.chapterOf(next) && this.journey.chapters?.length) {
+          const asked = await st.chapterEnd?.(this.journey.chapters[this.chapterOf(seq)], this.seqs.filter(q => this.chapterOf(q) === this.chapterOf(seq)));
+          if (!live()) return;
+          if (asked) continue;
+        }
+        if (await st.say(pick(GLUE.goOn), 'en', { glue: true, toYou: true }) === 'stopped') return;
         await st.listenWait(st.waitForMe() ? 0 : 4000); // 0 = until I answer
       }
     } finally {
