@@ -312,6 +312,7 @@ async function renderPictures(el) {
   const seqs = await store.sequences(j.id);
   const noPrompt = seqs.filter(s => s.de?.length && !s.prompt);
   const withPrompt = seqs.filter(s => s.prompt);
+  const withText = seqs.filter(s => s.de?.length);
   const hasImg = new Set();
   for (const s of withPrompt) if (await store.imagePath(j.id, s.n)) hasImg.add(s.n);
   if (!withPrompt.find(s => s.n === pic.n)) pic.n = (withPrompt.find(s => !hasImg.has(s.n)) || withPrompt[0])?.n || 0;
@@ -325,8 +326,9 @@ async function renderPictures(el) {
       <div class="row"><label>Ask for the next <input id="pc-count" type="number" min="1" max="${noPrompt.length}" value="${Math.min(6, noPrompt.length)}"> parts</label></div>
       <textarea class="copybox" readonly id="pc-request"></textarea>
       <div class="row"><button class="btn primary" id="pc-copy">Copy the request</button><span class="hint">Paste it into your Claude project. Claude answers with a second file, named <b id="pc-file-name"></b>. Give that file here:</span></div>
-      <div id="pc-upload"></div>` : `<div class="note ok">Every part that has texts also has a picture prompt. Nothing to ask for right now.</div>
-      <p class="hint">For more pictures, first add new texts in the <b>Texts</b> tab. They will then appear here.</p>
+      <div id="pc-upload"></div>` : `<div class="note info"><b>Nothing to copy here yet.</b> Grandma has texts for ${withText.length ? `parts ${withText[0].n} to ${withText[withText.length - 1].n}` : 'no parts'}, and each of them already has a picture prompt.</div>
+      <p><b>Did Claude already give you a new texts file?</b> Add it first: open the Texts tab, drop the file into step 2 and press “Save to my journey”. Then come back here, and the request to copy will be waiting.</p>
+      <div class="row"><button class="btn primary" id="pc-to-texts">Go to Texts</button></div>
       <details><summary>I have a pictures file from Claude anyway</summary><div id="pc-upload"></div></details>`}
     </div>
     <div class="step"><h3><span class="num">2</span>One prompt at a time into ChatGPT</h3>
@@ -352,6 +354,7 @@ async function renderPictures(el) {
     $('#pc-copy').onclick = () => ctx.copy($('#pc-request').value, 'Copied. Paste it into Claude.');
   }
   uploader($('#pc-upload'), 'pictures', () => render());
+  if ($('#pc-to-texts')) $('#pc-to-texts').onclick = () => { tab = 'texts'; render(); };
   if (!cur) return;
   $('#pc-prompt').value = cur.prompt;
   $('#pc-copy-prompt').onclick = () => ctx.copy(cur.prompt, 'Copied. Paste it into ChatGPT.');
