@@ -183,3 +183,11 @@ test('a word that is not in the list gets the matching English line', async () =
   assert.equal((await lookup('schau', 'de', seq, [])).meaning, 'look');
   assert.deepEqual(await lookup('den', 'de', seq, []), { word: 'den', meaning: '', source: '' });
 });
+
+test('the page names the current version of every script', async () => {
+  // If this fails, run: node tools/stamp.mjs
+  const { stamped } = await import('../tools/stamp.mjs');
+  const html = readFileSync(new URL('../docs/index.html', import.meta.url), 'utf8');
+  assert.equal(stamped(html), html, 'docs/index.html is stale: run node tools/stamp.mjs');
+  assert.match(html, /<script type="importmap">/);
+});
