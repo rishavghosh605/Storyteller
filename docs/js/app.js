@@ -5,7 +5,7 @@ import { Ears, understand, earsSupported } from './ears.js';
 import { StoryRoom, GLUE } from './story.js';
 import * as tea from './tea.js';
 import { SWITCH, ago } from './format.js';
-import { lookup } from './words.js';
+import { lookup, matchingLine } from './words.js';
 import * as sounds from './sounds.js';
 import { initPanels, openSheet, closeSheet, sheetOpen } from './panels.js';
 
@@ -497,9 +497,20 @@ async function showMeaning(el, n) {
   const seq = story.seq(n) || story.current;
   const hit = await lookup(el.textContent, lang, seq, story.seqs);
   if (!hit) { pop.hidden = true; return; }
-  pop.innerHTML = `<b>${esc(hit.word)}</b>${hit.meaning ? ' = ' + esc(hit.meaning) : ''}<small>${esc(hit.source)}</small>`;
+  if (hit.meaning) {
+    pop.innerHTML = `<b>${esc(hit.word)}</b> = ${esc(hit.meaning)}<small>${esc(hit.source)}</small>`;
+  } else {
+    // Not in the word list: show how she tells this moment in the other language.
+    const inTexts = el.closest('p[data-i]');
+    const i = inTexts ? +inTexts.dataset.i : (S.nowLine && seq && S.nowLine.n === seq.n && S.nowLine.lang === lang ? S.nowLine.i : -1);
+    const line = i >= 0 ? matchingLine(seq, lang, i) : '';
+    hit.context = line;
+    pop.innerHTML = line
+      ? `<b>${esc(hit.word)}</b><br><span class="pop-line">${esc(line)}</span><small>${lang === 'de' ? 'The same moment in English. Find the word in it.' : 'The same moment in German.'}</small>`
+      : `<b>${esc(hit.word)}</b><small>Not in this part's word list. Ask Grandma in the tea room.</small>`;
+  }
   place();
-  if (hit.meaning) keepWord(el, hit, seq);
+  if (hit.meaning || hit.context) keepWord(el, hit, seq);
 }
 
 // ---------- the word jar ----------
@@ -515,7 +526,7 @@ async function keepWord(el, hit, seq) {
   const jar = (await store.getJSON(jarPath())) || [];
   const old = jar.find(x => x.w.toLowerCase() === w.toLowerCase() && x.lang === lang);
   if (old) { old.count = (old.count || 1) + 1; old.at = Date.now(); }
-  else jar.push({ w, m: hit.meaning, lang, n: seq?.n || 0, line, at: Date.now(), seen: 0, count: 1 });
+  else jar.push({ w, m: hit.meaning || '', ctx: hit.meaning ? '' : hit.context, lang, n: seq?.n || 0, line, at: Date.now(), seen: 0, count: 1 });
   await store.putJSON(jarPath(), jar, { lazy: true });
 }
 async function wordJar() {
@@ -530,8 +541,9 @@ async function wordJar() {
   few.forEach((x, i) => {
     steps.push([i ? pick(['Here is another of yours.', 'And this one.']) : 'You asked me about this one.', 'en']);
     steps.push([x.w, x.lang]);
-    steps.push([`That means: ${x.m}.`, 'en']);
+    if (x.m) steps.push([`That means: ${x.m}.`, 'en']);
     if (x.line && x.line.split(/\s+/).length > 1) { steps.push(['I said it like this.', 'en']); steps.push([x.line, x.lang]); }
+    if (!x.m && x.ctx) { steps.push([x.lang === 'de' ? 'And in English, I told it like this.' : 'And in German, like this.', 'en']); steps.push([x.ctx, x.lang === 'de' ? 'en' : 'de']); }
   });
   steps.push([jar.length > few.length ? `That is enough for now. There are ${jar.length - few.length} more in your jar for another day.` : 'And that is your whole jar, my dear. Well done.', 'en']);
   for (const [text, lang] of steps) {

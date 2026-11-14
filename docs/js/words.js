@@ -1,8 +1,6 @@
 // Word meanings. First the word list that came with the sequence (it fits the context
-// and works offline), then the other sequences, then a free online dictionary.
-const CACHE_KEY = 'grandma.dict';
-let cache = null;
-function load() { if (!cache) { try { cache = JSON.parse(localStorage.getItem(CACHE_KEY) || '{}'); } catch { cache = {}; } } return cache; }
+// and works offline), then the lists of the other sequences. If the word is in none of
+// them, the matching line of the other language is shown, so I can work it out from context.
 
 export const bare = w => w.toLowerCase().replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, '');
 
@@ -26,18 +24,28 @@ export async function lookup(raw, lang, seq, allSeqs = []) {
     const hit = inSeq(w, seq) || allSeqs.map(s => inSeq(w, s)).find(Boolean);
     if (hit) return hit;
   }
-  const key = `${lang}:${w}`;
-  const c = load();
-  if (c[key]) return { word: w, meaning: c[key], source: 'online dictionary (saved)' };
-  try {
-    const pair = lang === 'de' ? 'de|en' : 'en|de';
-    const r = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(w)}&langpair=${pair}`);
-    const j = await r.json();
-    const m = (j?.responseData?.translatedText || '').trim();
-    if (m && m.toLowerCase() !== w) {
-      c[key] = m; try { localStorage.setItem(CACHE_KEY, JSON.stringify(c)); } catch { /* full */ }
-      return { word: w, meaning: m, source: 'online dictionary (MyMemory), may not fit the context' };
-    }
-  } catch { /* offline */ }
-  return { word: w, meaning: '', source: 'No meaning found. Ask Grandma in the tea room, or Claude.' };
+  // Not in the lists that came with the story: no guess from a machine.
+  // The app then shows the line of the other telling instead (see matchingLine).
+  return { word: w, meaning: '', source: '' };
+}
+
+// The line of the other language that tells the same moment as line i.
+// Both tellings run in the same order, in blocks separated by empty lines,
+// but the English one has a few extra lines, so the place is found by proportion.
+export function matchingLine(seq, lang, i) {
+  const other = lang === 'de' ? 'en' : 'de';
+  const from = seq?.[lang] || [], to = seq?.[other] || [];
+  if (!from[i] || !to.some(Boolean)) return '';
+  const blocks = lines => { const out = [[]]; lines.forEach((l, k) => { if (l) out[out.length - 1].push(k); else if (out[out.length - 1].length) out.push([]); }); return out.filter(b => b.length); };
+  const A = blocks(from), B = blocks(to);
+  const share = (pos, len, lenTo) => (len <= 1 ? 0 : Math.round(pos * (lenTo - 1) / (len - 1)));
+  let k;
+  if (A.length === B.length) {
+    const b = A.findIndex(x => x.includes(i));
+    k = B[b][share(A[b].indexOf(i), A[b].length, B[b].length)];
+  } else {
+    const fa = A.flat(), fb = B.flat();
+    k = fb[share(fa.indexOf(i), fa.length, fb.length)];
+  }
+  return to[k] ? to[k].replace(/\s*\[[^\]]*\]/g, '').trim() : '';
 }

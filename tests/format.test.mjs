@@ -6,6 +6,7 @@ import { parseBatch, textRequest, pictureRequest, claudeInstruction, chatgptInst
 import { cut, cursorAfter, textToBook, linesToParas, parasToSents, findChapters } from '../docs/js/book.js';
 import { understand } from '../docs/js/ears.js';
 import { reply } from '../docs/js/tea.js';
+import { matchingLine, lookup } from '../docs/js/words.js';
 
 const sample = readFileSync(new URL('../docs/samples/momo-texts-001-003.md', import.meta.url), 'utf8');
 const pics = readFileSync(new URL('../docs/samples/momo-pictures-001-003.md', import.meta.url), 'utf8');
@@ -165,4 +166,20 @@ test('chapters are found in the book itself', () => {
     { page: 40, i: 8, title: 'Chapter 2' },
   ]);
   assert.deepEqual(findChapters(null), []);
+});
+
+test('a word that is not in the list gets the matching English line', async () => {
+  const seq = parseBatch(sample).sequences[0];
+  // first and last lines of a block match, whatever extras the English telling has
+  assert.equal(matchingLine(seq, 'de', 0), seq.en[0]);
+  const lastDe = seq.de.length - 1, lastEn = seq.en.length - 1;
+  assert.equal(matchingLine(seq, 'de', lastDe), seq.en[lastEn].replace(/\s*\[wait\]/, ''));
+  const i = seq.de.indexOf('Dort wohnen Könige und Kaiser.');
+  assert.equal(matchingLine(seq, 'de', i), 'Kings and emperors live in them.');
+  assert.equal(matchingLine(seq, 'en', seq.en.indexOf('Kings and emperors live in them.')), 'Dort wohnen Könige und Kaiser.');
+  assert.equal(matchingLine(seq, 'de', 3), '', 'an empty line has no partner');
+  assert.ok(!matchingLine(seq, 'de', seq.de.findIndex(l => /\[wait\]/.test(l))).includes('[wait]'));
+  // in the list: a meaning. Not in the list: no meaning and no online guess.
+  assert.equal((await lookup('schau', 'de', seq, [])).meaning, 'look');
+  assert.deepEqual(await lookup('den', 'de', seq, []), { word: 'den', meaning: '', source: '' });
 });
