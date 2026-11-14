@@ -88,18 +88,19 @@ function uploader(box, want, onSaved) {
     const span = a => a.length ? (a.length === 1 ? `${a[0]}` : `${Math.min(...a)} to ${Math.max(...a)}`) : '';
     const warns = [...parsed.warnings];
     if (parsed.journey && parsed.journey !== j.id) warns.unshift(`This file was made for the journey "${parsed.journey}", but you are in "${j.id}".`);
-    if (want === 'texts' && !seqN.length && picN.length) warns.unshift('This file contains picture prompts, not texts. That is fine, they will be saved as prompts.');
-    if (want === 'pictures' && seqN.length && !picN.length) warns.unshift('This is the texts file. It holds the story only, no picture prompts. For pictures, copy the request above, paste it into Claude, and bring the file whose name contains "pictures".');
+    const notes = [];
+    if (seqN.length && !picN.length) notes.push('This file has the story only, without picture prompts. That is fine. You can get the prompts later under “Make pictures”.');
     const any = seqN.length + picN.length > 0;
     out.innerHTML = `
       ${any ? `<div class="note ok">Found ${seqN.length ? `<b>${seqN.length} ${seqN.length === 1 ? 'sequence' : 'sequences'}</b> (${span(seqN)})` : ''}${seqN.length && picN.length ? ' and ' : ''}${picN.length ? `<b>${picN.length} picture ${picN.length === 1 ? 'prompt' : 'prompts'}</b> (${span(picN)})` : ''}.</div>` : ''}
       ${warns.map(w => `<div class="note warn">${esc(w)}</div>`).join('')}
+      ${notes.map(w => `<div class="note info">${esc(w)}</div>`).join('')}
       ${parsed.sequences.length ? `<details><summary>Look inside</summary>${parsed.sequences.map(s => `<p><b>${s.n}. ${esc(s.title.de)} · ${esc(s.title.en)}</b><br><span class="hint">${s.de.filter(Boolean).length} German lines, ${s.en.filter(Boolean).length} English lines, ${s.nouns.length} nouns, ${Object.keys(s.words).length} word meanings</span></p>`).join('')}</details>` : ''}
       ${any ? `<div class="row"><button class="btn primary" data-save>Save to my journey</button><span class="hint">Goes to ${esc(storageName())}.</span></div>` : ''}`;
     const save = out.querySelector('[data-save]');
     if (save) save.onclick = async () => {
       save.disabled = true; save.textContent = 'Saving…';
-      try { await importBatch(parsed, text); ctx.toast(parsed.sequences.length && !parsed.pictures.length ? 'Saved. Grandma has new pages. Pictures are a separate step.' : 'Saved.'); onSaved && onSaved(parsed); }
+      try { await importBatch(parsed, text); ctx.toast(parsed.sequences.length ? 'Saved. Grandma has new pages.' : 'Saved.'); onSaved && onSaved(parsed); }
       catch (e) { out.insertAdjacentHTML('beforeend', `<div class="note warn">${esc(e.message)}</div>`); save.disabled = false; save.textContent = 'Save to my journey'; }
     };
   };
@@ -239,11 +240,13 @@ async function renderTexts(el) {
   const firstN = (withText.length ? Math.max(...withText.map(s => s.n)) : 0) + 1;
   const p = await store.progress(j.id);
   const untold = withText.filter(s => s.n >= (p.seq || 1)).length;
-  const noPic = withText.filter(s => !s.prompt).length;
-  el.innerHTML = `<h2>Texts for “${esc(j.title)}”</h2>
+  let waiting = 0;
+  for (const q of withText) if (q.prompt && !(await store.imagePath(j.id, q.n))) waiting++;
+  el.innerHTML = `<h2>New pages for “${esc(j.title)}”</h2>
     <p class="hint">${withText.length} parts are prepared, ${untold} of them not told yet. Pages prepared: ${Math.max(0, (j.cursor?.page || 1) - 1)}${j.pages ? ' of ' + j.pages : ''}.</p>
-    ${noPic ? `<div class="note info">${noPic === 1 ? '1 part has' : noPic + ' parts have'} texts but no picture prompt yet. The texts file does not contain pictures. <button class="btn" id="tx-to-pics">Go to Pictures</button></div>` : ''}
+    ${waiting ? `<div class="note info">${waiting === 1 ? '1 part is' : waiting + ' parts are'} waiting for a picture. <button class="btn" id="tx-to-pics">Make pictures</button></div>` : ''}
     <div class="step"><h3><span class="num">1</span>Ask Claude for the next pages</h3>
+      <p class="hint">One request, one file back. The file holds the story in both languages and the picture prompts.</p>
       <div class="row">
         <label>Sequence size <select id="tx-size">${Object.entries(SIZES).map(([k, v]) => `<option value="${k}" ${j.size === k ? 'selected' : ''}>${v.label}</option>`).join('')}</select></label>
         <label>How many sequences <input id="tx-count" type="number" min="1" max="60" value="${DEFAULT_COUNT[j.size] || 10}"></label>
@@ -252,7 +255,7 @@ async function renderTexts(el) {
       ${book ? '<label class="check"><input type="checkbox" id="tx-include"> Put the book\'s text into the request (longer, but Claude cannot pick the wrong pages)</label>' : '<div class="note info">The book file is not in this browser, so the request can only name page numbers. Attach the file under <b>Books</b> for exact borders.</div>'}
       <p id="tx-summary"></p>
       <textarea class="copybox" readonly id="tx-request"></textarea>
-      <div class="row"><button class="btn primary" id="tx-copy">Copy the request</button><span class="hint">Paste it into your Claude project. Claude answers with one file.</span></div>
+      <div class="row"><button class="btn primary" id="tx-copy">Copy the request</button><span class="hint">Paste it into your Claude project. Claude answers with one file. Download it.</span></div>
     </div>
     <div class="step"><h3><span class="num">2</span>Give Claude's file to Grandma</h3><div id="tx-upload"></div></div>`;
   const build = () => {
@@ -318,42 +321,40 @@ async function renderPictures(el) {
   if (!withPrompt.find(s => s.n === pic.n)) pic.n = (withPrompt.find(s => !hasImg.has(s.n)) || withPrompt[0])?.n || 0;
   const cur = withPrompt.find(s => s.n === pic.n);
   const idx = withPrompt.indexOf(cur);
-  el.innerHTML = `<h2>Pictures for “${esc(j.title)}”</h2>
-    <p class="hint">Pictures come in their own file from Claude. The texts file (its name contains “texts”) holds only the story.</p>
-    <p class="hint">${withPrompt.length} picture prompts, ${hasImg.size} pictures saved.</p>
-    <div class="step"><h3><span class="num">1</span>Ask Claude for picture prompts</h3>
-      ${noPrompt.length ? `<p><b>${noPrompt.length === 1 ? `Part ${noPrompt[0].n} has` : `Parts ${noPrompt[0].n} to ${noPrompt[noPrompt.length - 1].n} have`} texts but no picture prompt yet.</b></p>
-      <div class="row"><label>Ask for the next <input id="pc-count" type="number" min="1" max="${noPrompt.length}" value="${Math.min(6, noPrompt.length)}"> parts</label></div>
+  const todo = withPrompt.filter(q => !hasImg.has(q.n)).length;
+  const missing = noPrompt.length ? `<details class="step" ${withPrompt.length ? '' : 'open'}><summary>${noPrompt.length === 1 ? `Part ${noPrompt[0].n} has` : `Parts ${noPrompt[0].n} to ${noPrompt[noPrompt.length - 1].n} have`} no picture prompt yet. Get ${noPrompt.length === 1 ? 'it' : 'them'} from Claude</summary>
+      <p class="hint">A picture prompt is a text that describes the picture. Claude writes it, ChatGPT draws from it. Normally the prompts arrive together with the story. These parts came without.</p>
+      <div class="row"><label>Ask for the next <input id="pc-count" type="number" min="1" max="${noPrompt.length}" value="${Math.min(15, noPrompt.length)}"> parts</label></div>
       <textarea class="copybox" readonly id="pc-request"></textarea>
-      <div class="row"><button class="btn primary" id="pc-copy">Copy the request</button><span class="hint">Paste it into your Claude project. Claude answers with a second file, named <b id="pc-file-name"></b>. Give that file here:</span></div>
-      <div id="pc-upload"></div>` : `<div class="note info"><b>Nothing to copy here yet.</b> Grandma has texts for ${withText.length ? `parts ${withText[0].n} to ${withText[withText.length - 1].n}` : 'no parts'}, and each of them already has a picture prompt.</div>
-      <p><b>Did Claude already give you a new texts file?</b> Add it first: open the Texts tab, drop the file into step 2 and press “Save to my journey”. Then come back here, and the request to copy will be waiting.</p>
-      <div class="row"><button class="btn primary" id="pc-to-texts">Go to Texts</button></div>
-      <details><summary>I have a pictures file from Claude anyway</summary><div id="pc-upload"></div></details>`}
-    </div>
-    <div class="step"><h3><span class="num">2</span>One prompt at a time into ChatGPT</h3>
-      ${cur ? `<div class="carousel">
-        <button class="ctl small" id="pc-prev" ${idx <= 0 ? 'disabled' : ''} title="Previous prompt"><span data-icon="left"></span></button>
-        <div class="mid"><p><b>Picture ${cur.n}</b> of ${withPrompt[withPrompt.length - 1].n}: ${esc(cur.title?.en || '')} <span class="pill ${hasImg.has(cur.n) ? 'ok' : ''}">${hasImg.has(cur.n) ? 'picture saved' : 'no picture yet'}</span>${cur.layout ? `<span class="pill">${esc(cur.layout)}</span>` : ''}</p>
+      <div class="row"><button class="btn primary" id="pc-copy">Copy the request</button><span class="hint">Paste it into your Claude project. Claude answers with a text file named <b id="pc-file-name"></b>. Give that file here:</span></div>
+      <div id="pc-upload"></div></details>` : '';
+  el.innerHTML = `<h2>Make pictures for “${esc(j.title)}”</h2>
+    <p class="hint">${hasImg.size} of ${withPrompt.length} pictures are made${todo ? `, ${todo} to go` : ''}.</p>
+    ${cur ? `<div class="step"><h3><span class="num">1</span>Copy the prompt into ChatGPT</h3>
+      <div class="carousel">
+        <button class="ctl small" id="pc-prev" ${idx <= 0 ? 'disabled' : ''} title="Previous part"><span data-icon="left"></span></button>
+        <div class="mid"><p><b>Part ${cur.n}</b>: ${esc(cur.title?.en || '')} <span class="pill ${hasImg.has(cur.n) ? 'ok' : ''}">${hasImg.has(cur.n) ? 'picture saved' : 'no picture yet'}</span></p>
           <textarea class="copybox tall" readonly id="pc-prompt"></textarea></div>
-        <button class="ctl small" id="pc-next" ${idx >= withPrompt.length - 1 ? 'disabled' : ''} title="Next prompt"><span data-icon="right"></span></button>
+        <button class="ctl small" id="pc-next" ${idx >= withPrompt.length - 1 ? 'disabled' : ''} title="Next part"><span data-icon="right"></span></button>
       </div>
-      <div class="row"><button class="btn primary" id="pc-copy-prompt">Copy this prompt</button><span class="hint">Paste it into ChatGPT. One prompt, one picture.</span></div>` : '<p class="hint">No prompts yet. Do step 1 first.</p>'}
+      <div class="row"><button class="btn primary" id="pc-copy-prompt">Copy this prompt</button><span class="hint">Paste it into ChatGPT. One prompt, one picture.</span></div>
     </div>
-    ${cur ? `<div class="step"><h3><span class="num">3</span>Paste the finished picture for part ${cur.n}</h3>
+    <div class="step"><h3><span class="num">2</span>Paste the finished picture for part ${cur.n}</h3>
       <div class="pastebox">
         <div class="drop" id="pc-drop">Copy the picture in ChatGPT, then press <b>Ctrl+V</b> (or ⌘V) here.
           <button class="btn" id="pc-paste">Paste from clipboard</button>
           <label class="btn"><input type="file" id="pc-file" accept="image/*" hidden>Choose a file</label></div>
         <div id="pc-preview"></div>
-        <div class="row"><button class="btn primary" id="pc-save" disabled>Save picture for part ${cur.n}</button><span class="hint">Goes to ${esc(storageName())}.</span></div>
-      </div></div>` : ''}`;
+        <div class="row"><button class="btn primary" id="pc-save" disabled>Save picture for part ${cur.n}</button><span class="hint">Goes to ${esc(storageName())}. Then the next part comes up.</span></div>
+      </div></div>` : (noPrompt.length ? '' : `<div class="note info"><b>No pictures to make yet.</b> Bring new pages first. Their picture prompts come with them.</div>
+      <div class="row"><button class="btn primary" id="pc-to-texts">Go to New pages</button></div>`)}
+    ${missing}`;
   if (noPrompt.length) {
     const build = () => { const t = pictureRequest(j, noPrompt.slice(0, Math.max(1, +$('#pc-count').value || 1))); $('#pc-request').value = t; $('#pc-file-name').textContent = (t.match(/named (\S+\.md)/) || [])[1] || ''; };
     $('#pc-count').oninput = build; build();
     $('#pc-copy').onclick = () => ctx.copy($('#pc-request').value, 'Copied. Paste it into Claude.');
   }
-  uploader($('#pc-upload'), 'pictures', () => render());
+  if ($('#pc-upload')) uploader($('#pc-upload'), 'pictures', () => render());
   if ($('#pc-to-texts')) $('#pc-to-texts').onclick = () => { tab = 'texts'; render(); };
   if (!cur) return;
   $('#pc-prompt').value = cur.prompt;
@@ -393,7 +394,7 @@ async function renderImages(el) {
       <div class="cap"><b>${n}.</b> ${esc(s?.title?.en || '')}</div>
       <div class="row"><label class="btn"><input type="file" accept="image/*" hidden data-replace>Replace</label><button class="btn" data-paste>Paste</button><button class="btn danger" data-del>Delete</button></div></div>`);
   }
-  el.innerHTML = `<h2>Images for “${esc(j.title)}”</h2><p class="hint">${paths.length} saved. To add pictures, use the <b>Pictures</b> tab.</p><div class="grid">${tiles.join('') || '<p>No pictures saved yet.</p>'}</div>`;
+  el.innerHTML = `<h2>Images for “${esc(j.title)}”</h2><p class="hint">${paths.length} saved. To add pictures, use the <b>Make pictures</b> tab.</p><div class="grid">${tiles.join('') || '<p>No pictures saved yet.</p>'}</div>`;
   el.querySelectorAll('.tile').forEach(t => {
     const n = +t.dataset.n;
     t.querySelector('img').onclick = () => { const lb = $('#lightbox'); lb.querySelector('img').src = t.querySelector('img').src; lb.hidden = false; };

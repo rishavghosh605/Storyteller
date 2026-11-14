@@ -22,19 +22,19 @@ To try it on your computer first: `python3 -m http.server 8000 --directory docs`
 
 Set once, under **Set once**: copy the Claude instruction into a Claude Project that holds your book, and the ChatGPT instruction into a ChatGPT Project.
 
-Texts:
+New pages:
 
-1. **Texts**: choose the sequence size and how many sequences. The app knows where you are and writes the request. Copy it.
-2. Paste it into Claude. Claude answers with one `.md` file.
+1. **New pages**: choose the sequence size and how many sequences. The app knows where you are and writes the request. Copy it.
+2. Paste it into Claude. Claude answers with one `.md` file that holds the story in both languages and the picture prompts.
 3. Drop that file into the app (or paste the answer as text) and press **Save to my journey**.
 
 Pictures:
 
-1. **Pictures**: copy the request for the next prompts, paste it into Claude, give the answer file to the app.
-2. The app shows one prompt at a time, with arrows and a copy button.
-3. Paste the prompt into ChatGPT. One prompt, one picture.
-4. Copy the picture in ChatGPT, press Ctrl+V in the app, press **Save**.
-5. **Images** shows the saved pictures. Each can be replaced or deleted.
+1. **Make pictures** shows one prompt at a time, with arrows and a copy button. Paste the prompt into ChatGPT. One prompt, one picture.
+2. Copy the picture in ChatGPT, press Ctrl+V in the app, press **Save**. The next part comes up.
+3. **Saved pictures** shows what you have. Each picture can be replaced or deleted.
+
+If a part arrived without a picture prompt, **Make pictures** offers a request for just the missing prompts.
 
 ## Using it
 

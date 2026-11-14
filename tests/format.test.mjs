@@ -27,6 +27,13 @@ test('the sample batch parses cleanly', () => {
   assert.ok(Object.keys(r.sequences[2].who).includes('The tourists'));
 });
 
+test('one file may hold texts and picture prompts together', () => {
+  const r = parseBatch(sample.replace('=== END ===', '') + pics.replace('=== GRANDMA BATCH ===', ''));
+  assert.deepEqual(r.sequences.map(x => x.n), [1, 2, 3]);
+  assert.deepEqual(r.pictures.map(x => x.n), [1, 2, 3]);
+  assert.deepEqual(r.warnings, []);
+});
+
 test('picture prompts parse', () => {
   const r = parseBatch(pics);
   assert.deepEqual(r.pictures.map(p => p.n), [1, 2, 3]);
@@ -102,9 +109,10 @@ test('requests name sequences, pages and borders', () => {
   const j = { id: 'momo', title: 'Momo', size: 'page1' };
   const t = textRequest(j, cut(book, { page: 1, i: 0 }, 'page1', 2), 4);
   assert.match(t, /sequences 4 to 5/);
-  assert.match(t, /SEQUENCE 4 \| ref 0-\d+ \| page 1 \| starts at «Absatz 0\./);
+  assert.match(t, /SEQUENCE 4 \| ref 0-\d+ \| page 1 \| picture: one scene \| starts at «Absatz 0\./);
+  assert.match(t, /also its picture prompt, all in the same file/);
   assert.match(textRequest(j, cut(book, { page: 1, i: 0 }, 'page1', 1), 4, { includeText: true }), /SOURCE TEXT:\nAbsatz 0\. Wort/);
-  assert.match(t, /momo-texts-004-005\.md/);
+  assert.match(t, /momo-004-005\.md/);
   const p = pictureRequest(j, parseBatch(sample).sequences);
   assert.match(p, /PICTURE 1 \| pages 6 to 7 \| panorama of several moments/);
 });

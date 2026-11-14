@@ -124,16 +124,17 @@ export function textRequest(journey, ranges, firstN, opts = {}) {
   const L = [];
   L.push(`GRANDMA TEXTS for the journey "${journey.title}" (journey id: ${journey.id})`);
   L.push(`Please write ${ranges.length === 1 ? `sequence ${firstN}` : `sequences ${firstN} to ${lastN}`}: ${from === to ? `page ${from}` : `pages ${from} to ${to}`} of the book. Follow your standing instruction.`);
+  L.push('For every sequence write the two tellings and also its picture prompt, all in the same file.');
   L.push(`Sequence size: ${SIZES[journey.size]?.short || journey.size}. A page number is the position of the page in the file (the first page of the file is page 1).`);
   L.push('');
   ranges.forEach((r, k) => {
-    let l = `SEQUENCE ${firstN + k} | ref ${r.ref} | ${describeRange(r)}`;
+    let l = `SEQUENCE ${firstN + k} | ref ${r.ref} | ${describeRange(r)} | picture: ${r.pages[1] > r.pages[0] ? 'panorama of several moments' : 'one scene'}`;
     if (r.first) l += ` | starts at ${quote(r.first)} | ends with ${quote(r.last)}`;
     L.push(l);
     if (opts.includeText && r.text) { L.push('SOURCE TEXT:'); L.push(r.text); L.push(''); }
   });
   L.push('');
-  L.push(`Give me one file named ${journey.id}-texts-${pad3(firstN)}-${pad3(lastN)}.md.`);
+  L.push(`Give me one file named ${journey.id}-${pad3(firstN)}-${pad3(lastN)}.md.`);
   return L.join('\n');
 }
 
@@ -152,7 +153,7 @@ export function pictureRequest(journey, seqs) {
     L.push(l);
   }
   L.push('');
-  L.push(`Give me one file named ${journey.id}-pictures-${pad3(a)}-${pad3(b)}.md.`);
+  L.push(`Give me one file named ${journey.id}-picture-prompts-${pad3(a)}-${pad3(b)}.md.`);
   return L.join('\n');
 }
 
@@ -160,10 +161,10 @@ export function pictureRequest(journey, seqs) {
 export function claudeInstruction() {
   return `STANDING INSTRUCTION: GRANDMA STORYTELLER
 
-You prepare a book so that a warm grandmother can tell it aloud, bit by bit, to one listener who is learning German by listening. The book is attached to this project or chat. This works for any book. I will send you two kinds of short requests: "GRANDMA TEXTS" and "GRANDMA PICTURES". Answer each with exactly one downloadable Markdown file in the format below and nothing else. No preface, no summary after it.
+You prepare a book so that a warm grandmother can tell it aloud, bit by bit, to one listener who is learning German by listening. The book is attached to this project or chat. This works for any book. I will send you short requests that begin with "GRANDMA TEXTS". For every sequence in the request you write the German telling, the English telling, the helpers and one picture prompt, and you put everything into exactly one downloadable Markdown file in the format below. Nothing else: no preface, no summary after it. (Sometimes I send "GRANDMA PICTURES" instead. Then you write only the picture prompts.)
 
 HOW TO READ A REQUEST
-Each line "SEQUENCE n | ref ... | page(s) ... | starts at «...» | ends with «...»" is one small piece of the story, called a sequence. Page numbers are positions in the file (page 1 is the first page of the file), not printed page numbers. The two quotes are the exact borders: start with the sentence that begins at the first quote and stop after the sentence that ends with the second. If a request contains "SOURCE TEXT", use that text as the source for the sequence. Copy the "ref" value back unchanged. If you cannot find a passage, say so in one line and write nothing else.
+Each line "SEQUENCE n | ref ... | page(s) ... | picture: ... | starts at «...» | ends with «...»" is one small piece of the story, called a sequence. "picture:" says which kind of picture prompt this sequence gets. Page numbers are positions in the file (page 1 is the first page of the file), not printed page numbers. The two quotes are the exact borders: start with the sentence that begins at the first quote and stop after the sentence that ends with the second. If a request contains "SOURCE TEXT", use that text as the source for the sequence. Copy the "ref" value back unchanged. If you cannot find a passage, say so in one line and write nothing else.
 
 THE TWO TELLINGS
 For every sequence you write the same piece of story twice: once in German and once in English. Both are told by the same grandmother, in her own words. Do not copy the book's sentences. Tell what happens in them.
@@ -220,12 +221,18 @@ schläft (schlafen) = sleeps
 --- WHO ---
 Name: who this is and what they are doing now
 
-(then the next "=== SEQUENCE <n> ===" block, and so on)
+=== PICTURE <n> ===
+layout: <scene or panorama>
+labels: <the labels, separated by commas>
+--- PROMPT ---
+<the picture prompt for this sequence, written by the rules below>
+
+(then the next "=== SEQUENCE <n> ===" block with its "=== PICTURE <n> ===" block, and so on)
 
 === END ===
 
-PICTURE PROMPTS ("GRANDMA PICTURES")
-For each "PICTURE n" line you write one prompt that I paste into ChatGPT. ChatGPT already has a standing instruction for the drawing style and for how labels look, so do not repeat the style. Your job is to describe a picture that is alive.
+PICTURE PROMPTS
+For each sequence (or, in a "GRANDMA PICTURES" request, for each "PICTURE n" line) you write one prompt that I paste into ChatGPT. A picture prompt is text. You never make an image yourself. ChatGPT already has a standing instruction for the drawing style and for how labels look, so do not repeat the style. Your job is to describe a picture that is alive.
 
 Bring the scene to life. This matters most:
 - One wide, rich picture of the place where this part of the story happens, full of people who are doing things. Not a diagram and not objects lined up.
@@ -253,7 +260,7 @@ Arrows. Image makers often point arrows at the wrong thing. These rules prevent 
    LABEL CHECK: «Herd» -> the stone stove at the back wall | «Maurer» -> the kneeling man building it | «Rock» -> the girl's patchwork skirt
    Then the sentence: "If an arrow would not touch its own object, move the label closer to the object instead of drawing a longer arrow."
 
-FILE FORMAT FOR "GRANDMA PICTURES"
+FILE FORMAT FOR A "GRANDMA PICTURES" REQUEST (picture prompts only)
 
 === GRANDMA BATCH ===
 journey: <journey id from the request>
