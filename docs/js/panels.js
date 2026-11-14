@@ -2,7 +2,7 @@
 import * as store from './store.js';
 import * as voice from './voice.js';
 import { fileToBook, cut, cursorAfter } from './book.js';
-import { parseBatch, textRequest, pictureRequest, claudeInstruction, chatgptInstruction, SIZES, SWITCH, slug } from './format.js';
+import { parseBatch, textRequest, pictureRequest, claudeInstruction, chatgptInstruction, SIZES, SWITCH, slug, INSTRUCTIONS_UPDATED, stamp, ago } from './format.js';
 import { localAIAvailable } from './tea.js';
 import { earsSupported } from './ears.js';
 
@@ -215,21 +215,39 @@ async function renderBooks(el) {
 
 // ---------- Set once ----------
 function renderOnce(el) {
+  const texts = { claude: claudeInstruction(), chatgpt: chatgptInstruction() };
+  const copied = store.settings().copied || {};
+  // Each instruction shows when it last changed, and whether you already copied this version on this device.
+  const tags = which => {
+    const mine = copied[which];
+    const same = mine && mine.h === stamp(texts[which]);
+    return `<span class="pill">updated ${ago(INSTRUCTIONS_UPDATED[which])}</span>` +
+      (same ? `<span class="pill ok">you copied this version ${ago(mine.at)}</span>` : mine ? '<span class="pill warn">changed since you copied it: copy it again</span>' : '<span class="pill">not copied on this device yet</span>');
+  };
   el.innerHTML = `<h2>Set once</h2>
-    <p class="hint">Two standing instructions. You give them once, and they work for every book.</p>
+    <p class="hint">Two standing instructions. You give them once, and they work for every book. If one changes later, copy it again and replace the old one.</p>
     <div class="step"><h3><span class="num">1</span>Claude: the main instruction</h3>
+      <p>${tags('claude')}</p>
       <p>In Claude, make a <b>Project</b> for your book. Add the book file to the project, and paste this text as the project's instructions. From then on a short request is enough.</p>
       <textarea class="copybox tall" readonly id="in-claude"></textarea>
-      <div class="row"><button class="btn primary" data-copy="in-claude">Copy the Claude instruction</button></div></div>
+      <div class="row"><button class="btn primary" data-copy="claude">Copy the Claude instruction</button></div></div>
     <div class="step"><h3><span class="num">2</span>ChatGPT: the picture instruction</h3>
+      <p>${tags('chatgpt')}</p>
       <p>In ChatGPT, make a <b>Project</b> (or keep one chat for this) and paste this text as its instructions, or as the first message. It keeps the style and the labels the same every week.</p>
       <textarea class="copybox tall" readonly id="in-gpt"></textarea>
-      <div class="row"><button class="btn primary" data-copy="in-gpt">Copy the ChatGPT instruction</button></div></div>
+      <div class="row"><button class="btn primary" data-copy="chatgpt">Copy the ChatGPT instruction</button></div></div>
     <div class="step"><h3>The two switch words</h3>
       <p>Say <b>“${SWITCH.tea}”</b> to put the book down and chat freely with Grandma. Say <b>“${SWITCH.story}”</b> to go back to the book. The round button at the bottom does the same.</p></div>`;
-  $('#in-claude').value = claudeInstruction();
-  $('#in-gpt').value = chatgptInstruction();
-  el.querySelectorAll('[data-copy]').forEach(b => { b.onclick = () => ctx.copy($('#' + b.dataset.copy).value, 'Copied. Paste it into the project instructions.'); });
+  $('#in-claude').value = texts.claude;
+  $('#in-gpt').value = texts.chatgpt;
+  el.querySelectorAll('[data-copy]').forEach(b => {
+    b.onclick = async () => {
+      const which = b.dataset.copy;
+      await ctx.copy(texts[which], 'Copied. Paste it into the project instructions.');
+      store.saveSettings({ copied: { ...(store.settings().copied || {}), [which]: { h: stamp(texts[which]), at: Date.now() } } });
+      render();
+    };
+  });
 }
 
 // ---------- Texts ----------
@@ -246,7 +264,7 @@ async function renderTexts(el) {
   const noPic = withText.filter(s => !s.prompt).length;
   el.innerHTML = `<h2>Texts for “${esc(j.title)}”</h2>
     <p class="hint">${withText.length} parts are prepared, ${untold} of them not told yet. Pages prepared: ${Math.max(0, (j.cursor?.page || 1) - 1)}${j.pages ? ' of ' + j.pages : ''}.</p>
-    ${noPic ? `<div class="note info">${noPic === 1 ? '1 part has' : noPic + ' parts have'} texts but no picture prompt yet. The texts file does not contain pictures. <button class="btn" id="tx-to-pics">Go to Pictures</button></div>` : ''}
+    ${noPic ? `<div class="note info">${noPic === 1 ? '1 part has' : noPic + ' parts have'} texts but no picture prompt yet. The texts file does not contain pictures. <button class="btn" id="tx-to-pics">Go to Make pictures</button></div>` : ''}
     <div class="step"><h3><span class="num">1</span>Ask Claude for the next pages</h3>
       <div class="row">
         <label>Sequence size <select id="tx-size">${Object.entries(SIZES).map(([k, v]) => `<option value="${k}" ${j.size === k ? 'selected' : ''}>${v.label}</option>`).join('')}</select></label>
@@ -322,7 +340,7 @@ async function renderPictures(el) {
   if (!withPrompt.find(s => s.n === pic.n)) pic.n = (withPrompt.find(s => !hasImg.has(s.n)) || withPrompt[0])?.n || 0;
   const cur = withPrompt.find(s => s.n === pic.n);
   const idx = withPrompt.indexOf(cur);
-  el.innerHTML = `<h2>Pictures for “${esc(j.title)}”</h2>
+  el.innerHTML = `<h2>Make pictures for “${esc(j.title)}”</h2>
     <p class="hint">Pictures come in their own file from Claude. The texts file (its name contains “texts”) holds only the story.</p>
     <p class="hint">${withPrompt.length} picture prompts, ${hasImg.size} pictures saved.</p>
     <div class="step"><h3><span class="num">1</span>Ask Claude for picture prompts</h3>
@@ -397,7 +415,7 @@ async function renderImages(el) {
       <div class="cap"><b>${n}.</b> ${esc(s?.title?.en || '')}</div>
       <div class="row"><label class="btn"><input type="file" accept="image/*" hidden data-replace>Replace</label><button class="btn" data-paste>Paste</button><button class="btn danger" data-del>Delete</button></div></div>`);
   }
-  el.innerHTML = `<h2>Images for “${esc(j.title)}”</h2><p class="hint">${paths.length} saved. To add pictures, use the <b>Pictures</b> tab.</p><div class="grid">${tiles.join('') || '<p>No pictures saved yet.</p>'}</div>`;
+  el.innerHTML = `<h2>Saved pictures for “${esc(j.title)}”</h2><p class="hint">${paths.length} saved. To add pictures, use the <b>Make pictures</b> tab.</p><div class="grid">${tiles.join('') || '<p>No pictures saved yet.</p>'}</div>`;
   el.querySelectorAll('.tile').forEach(t => {
     const n = +t.dataset.n;
     t.querySelector('img').onclick = () => { const lb = $('#lightbox'); lb.querySelector('img').src = t.querySelector('img').src; lb.hidden = false; };

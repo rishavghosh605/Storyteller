@@ -30,11 +30,11 @@ Texts:
 
 Pictures:
 
-1. **Pictures**: copy the request for the next prompts, paste it into Claude, give the answer file to the app.
+1. **Make pictures**: copy the request for the next prompts, paste it into Claude, give the answer file to the app.
 2. The app shows one prompt at a time, with arrows and a copy button.
 3. Paste the prompt into ChatGPT. One prompt, one picture.
 4. Copy the picture in ChatGPT, press Ctrl+V in the app, press **Save**.
-5. **Images** shows the saved pictures. Each can be replaced or deleted.
+5. **Saved pictures** shows the saved pictures. Each can be replaced or deleted.
 
 ## Using it
 

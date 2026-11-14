@@ -2,7 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { parseBatch, textRequest, pictureRequest, claudeInstruction, chatgptInstruction } from '../docs/js/format.js';
+import { parseBatch, textRequest, pictureRequest, claudeInstruction, chatgptInstruction, INSTRUCTIONS_UPDATED, stamp, ago } from '../docs/js/format.js';
 import { cut, cursorAfter, textToBook, linesToParas, parasToSents } from '../docs/js/book.js';
 import { understand } from '../docs/js/ears.js';
 import { reply } from '../docs/js/tea.js';
@@ -139,4 +139,16 @@ test('the tea room answers from what was told, and never looks ahead', () => {
   assert.match(reply('how does it end', view), /peek ahead/);
   assert.equal(reply('who are the tourists', view).includes('photo'), false, 'tourists appear only in part 3');
   assert.equal(reply('what is the capital of France', view), null);
+});
+
+test('instruction dates are kept up to date', () => {
+  // If this fails, an instruction text changed: set its new date in INSTRUCTIONS_UPDATED, then update the stamp here.
+  const pinned = { claude: ['wzfew4', '2026-11-14T14:50:00Z'], chatgpt: ['b0fz10', '2026-11-14T14:50:00Z'] };
+  assert.deepEqual([stamp(claudeInstruction()), INSTRUCTIONS_UPDATED.claude], pinned.claude);
+  assert.deepEqual([stamp(chatgptInstruction()), INSTRUCTIONS_UPDATED.chatgpt], pinned.chatgpt);
+  const now = Date.parse('2026-11-14T16:50:00Z');
+  assert.equal(ago('2026-11-14T14:50:00Z', now), '2 hours ago');
+  assert.equal(ago('2026-11-14T16:49:30Z', now), 'just now');
+  assert.equal(ago('2026-11-11T16:50:00Z', now), '3 days ago');
+  assert.equal(ago('2026-08-14T16:50:00Z', now), '3 months ago');
 });

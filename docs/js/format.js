@@ -157,6 +157,22 @@ export function pictureRequest(journey, seqs) {
 }
 
 // ---------- standing instructions ----------
+// When each instruction text last changed. Change the date whenever the text changes
+// (a test fails if the text changes and the date does not).
+export const INSTRUCTIONS_UPDATED = { claude: '2026-11-14T14:50:00Z', chatgpt: '2026-11-14T14:50:00Z' };
+export const stamp = text => { let h = 5381; for (let i = 0; i < text.length; i++) h = ((h * 33) ^ text.charCodeAt(i)) >>> 0; return h.toString(36); };
+export function ago(date, now = Date.now()) {
+  const min = Math.max(0, Math.round((now - new Date(date).getTime()) / 60000));
+  const n = (v, unit) => `${v} ${unit}${v === 1 ? '' : 's'} ago`;
+  if (min < 2) return 'just now';
+  if (min < 60) return n(min, 'minute');
+  if (min < 60 * 24) return n(Math.round(min / 60), 'hour');
+  const days = Math.round(min / (60 * 24));
+  if (days < 14) return n(days, 'day');
+  if (days < 60) return n(Math.round(days / 7), 'week');
+  if (days < 365) return n(Math.round(days / 30), 'month');
+  return n(Math.round(days / 365), 'year');
+}
 export function claudeInstruction() {
   return `STANDING INSTRUCTION: GRANDMA STORYTELLER
 
