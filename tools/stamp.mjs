@@ -10,8 +10,11 @@ export function stamped(html) {
   const files = readdirSync(new URL('js/', root)).filter(f => f.endsWith('.js')).sort();
   const imports = Object.fromEntries(files.map(f => [`./js/${f}`, `./js/${f}?v=${hash('js/' + f)}`]));
   const map = `<script type="importmap">${JSON.stringify({ imports })}</script>`;
+  const build = createHash('sha1').update(Object.values(imports).join('|')).digest('hex').slice(0, 10);
   return html
     .replace(/<script type="importmap">.*?<\/script>\n?/s, '')
+    .replace(/<meta name="build"[^>]*>\n?/, '')
+    .replace(/(<meta name="viewport"[^>]*>\n)/, `$1<meta name="build" content="${build}">\n`)
     .replace(/<link rel="stylesheet" href="css\/style\.css[^"]*">/, `<link rel="stylesheet" href="css/style.css?v=${hash('css/style.css')}">`)
     .replace(/<script type="module" src="(?:\.\/)?js\/app\.js[^"]*"><\/script>/, `${map}\n<script type="module" src="./js/app.js?v=${hash('js/app.js')}"></script>`);
 }

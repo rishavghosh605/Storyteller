@@ -7,6 +7,7 @@ import * as tea from './tea.js';
 import { SWITCH, ago } from './format.js';
 import { lookup, matchingLine } from './words.js';
 import * as sounds from './sounds.js';
+import * as neural from './neural.js';
 import { initPanels, openSheet, closeSheet, sheetOpen } from './panels.js';
 
 const $ = s => document.querySelector(s);
@@ -46,7 +47,7 @@ const S = {
 let cfg = store.settings();
 
 const stage = {
-  say, pause, listenWait, showPicture, hush,
+  say, pause, listenWait, showPicture, hush, prepare,
   glue: () => cfg.glue, waitForMe: () => cfg.waitForMe,
   onPlace: () => { updateControls(); updateTop(); },
   outOfPages: () => setAnswers([['Bring new pages', () => openSheet('texts')]]),
@@ -83,7 +84,15 @@ function renderCloud(words, lang, meta) {
   S.cloudMeta = { lang, seq: meta.seq || null };
 }
 let mouthTimer = null;
+// With a neural voice her mouth follows the real loudness of the sound, many times a second.
+let mouthByLevel = false;
+function mouthLevel(v) {
+  const m = $('#mouth');
+  const want = v < 0.05 ? '' : v < 0.22 ? 'open1' : v < 0.5 ? 'o' : 'open2';
+  if (m.className.baseVal !== want) m.className.baseVal = want;
+}
 function flap(word) {
+  if (mouthByLevel) return;
   const m = $('#mouth');
   m.className.baseVal = /[ouöüOUÖÜ]/.test(word || '') && Math.random() < .5 ? 'o' : (Math.random() < .5 ? 'open1' : 'open2');
   clearTimeout(mouthTimer);
@@ -120,14 +129,28 @@ async function say(text, lang, meta = {}) {
   for (let k = 0; k < parts.length; k++) {
     const part = parts[k];
     const base = offset;
-    r = await voice.speak(part, {
-      lang: de ? 'de-DE' : 'en-GB',
-      voiceName: de ? cfg.voiceDe : cfg.voiceEn,
-      rate: de ? cfg.rateDe * (cfg.slowDe ? 0.72 : 1) : cfg.rateEn,
-      pitch: de ? cfg.pitchDe : cfg.pitchEn,
-      onWord: i => revealWord(base + i),
-      onStart: info => { if (info.silent) silentNote(lang); },
-    });
+    const voiceName = de ? cfg.voiceDe : cfg.voiceEn;
+    const rate = de ? cfg.rateDe * (cfg.slowDe ? 0.72 : 1) : cfg.rateEn;
+    const n = neural.parse(voiceName);
+    r = 'fallback';
+    if (n && neural.ENGINES[n.engine].lang === lang) {
+      if (parts[k + 1]) prepare(parts[k + 1], lang); // the next sentence is made while this one plays
+      if (neural.state[n.engine].state === 'ready' && !S.waitingDots) { S.waitingDots = setTimeout(() => { if (id === S.sayId) $('#cloud-dots').hidden = false; }, 450); }
+      r = await neural.speak(part, { ...n, rate, onWord: i => revealWord(base + i), onLevel: mouthLevel, onStart: () => { mouthByLevel = true; clearTimeout(S.waitingDots); S.waitingDots = null; $('#cloud-dots').hidden = true; } });
+      clearTimeout(S.waitingDots); S.waitingDots = null; mouthByLevel = false;
+      if (id === S.sayId) $('#cloud-dots').hidden = true;
+    }
+    if (r === 'fallback') {
+      if (id !== S.sayId) { r = 'stopped'; break; }
+      r = await voice.speak(part, {
+        lang: de ? 'de-DE' : 'en-GB',
+        voiceName: n ? '' : voiceName,
+        rate,
+        pitch: de ? cfg.pitchDe : cfg.pitchEn,
+        onWord: i => revealWord(base + i),
+        onStart: info => { if (info.silent) silentNote(lang); },
+      });
+    }
     if (r !== 'end' || id !== S.sayId) { r = 'stopped'; break; }
     offset += voice.displayWords(part).length;
   }
@@ -143,6 +166,18 @@ function silentNote(lang) {
   if (silentTold[lang]) return; silentTold[lang] = true;
   const has = voice.voicesFor(lang).length > 0;
   toast(has ? 'No sound came out. Tap the page once, then check the volume.' : `This device has no ${lang === 'de' ? 'German' : 'English'} voice, so I show the words without sound. See Settings.`, 6000);
+}
+// With a neural voice, coming lines are made while the current one plays, so there is no gap.
+function prepare(text, lang) {
+  if (!text) return;
+  const n = neural.parse(lang === 'de' ? cfg.voiceDe : cfg.voiceEn);
+  if (!n || neural.ENGINES[n.engine].lang !== lang) return;
+  const rate = lang === 'de' ? cfg.rateDe * (cfg.slowDe ? 0.72 : 1) : cfg.rateEn;
+  try { neural.prepare(text, { ...n, rate }); } catch { /* she will make it when needed */ }
+}
+// Start loading the chosen neural voices, so they are ready by the time she speaks.
+function warmVoices() {
+  for (const name of [cfg.voiceEn, cfg.voiceDe]) { const n = neural.parse(name); if (n && neural.state[n.engine].state === 'off') neural.load(n.engine).catch(() => {}); }
 }
 function pause(ms) {
   return new Promise(res => {
@@ -284,7 +319,7 @@ function goToSleep() {
 function goPart(n) {
   if (!story.seq(n)) return;
   closeSheet();
-  if (!S.awake) { S.awake = true; body.classList.remove('asleep'); voice.unlock(); sounds.unlock(); ambience(); if (cfg.mic && !ears.on) ears.start(cfg.micLang); }
+  if (!S.awake) { S.awake = true; body.classList.remove('asleep'); voice.unlock(); sounds.unlock(); neural.unlock(); warmVoices(); ambience(); if (cfg.mic && !ears.on) ears.start(cfg.micLang); }
   if (S.room !== 'story') setRoom('story');
   clearAsk();
   story.goTo(n);
@@ -627,7 +662,7 @@ async function refresh() {
 async function wake() {
   if (S.awake) return;
   S.awake = true;
-  voice.unlock(); sounds.unlock(); ambience();
+  voice.unlock(); sounds.unlock(); neural.unlock(); warmVoices(); ambience();
   body.classList.remove('asleep');
   await voice.whenVoicesReady();
   if (cfg.mic && !ears.on) ears.start(cfg.micLang);
@@ -676,7 +711,8 @@ function wire() {
   };
   $('#cloud-text').onclick = e => { const w = e.target.closest('.w'); if (w && cfg.meanings) { showMeaning(w, S.cloudMeta?.seq?.n); e.stopPropagation(); } };
   document.addEventListener('click', () => { $('#pop').hidden = true; });
-  document.addEventListener('pointerdown', () => voice.unlock(), { once: true });
+  document.addEventListener('pointerdown', () => { voice.unlock(); neural.unlock(); }, { once: true });
+  voice.onStop(neural.stop);
   $('#picture').onclick = () => { const lb = $('#lightbox'); lb.querySelector('img').src = $('#picture').src; lb.hidden = false; };
   $('#lightbox').onclick = () => { $('#lightbox').hidden = true; };
   $('#album').onclick = () => { if (!nudge()) $('#album').hidden = true; };
@@ -737,7 +773,7 @@ async function boot(again) {
   }
 }
 
-export const ctx = { sounds, ambience, goPart, paintIcons, icon, story, selectJourney, refresh, toast, copy, hush, imageURL, say, setMic, updateControls, ears, understand };
+export const ctx = { neural, warmVoices, sounds, ambience, goPart, paintIcons, icon, story, selectJourney, refresh, toast, copy, hush, imageURL, say, setMic, updateControls, ears, understand };
 wire();
 initPanels(ctx);
 boot();

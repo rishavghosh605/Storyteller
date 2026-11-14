@@ -86,8 +86,11 @@ export const displayWords = text => text.replace(/\[[^\]]*\]/g, ' ').split(/\s+/
 let token = 0;
 let active = null; // finishes the breath that is being spoken right now
 
+let stopNeural = null; // set by app.js, so that this file does not depend on neural.js
+export function onStop(fn) { stopNeural = fn; }
 export function stop() {
   token++;
+  stopNeural && stopNeural();
   if (active) { const f = active; active = null; f('stopped'); }
   if (synth) { try { synth.cancel(); } catch { /* nothing to cancel */ } }
 }
@@ -149,8 +152,11 @@ export function speak(text, opts = {}) {
     u.onerror = e => finish(e.error === 'interrupted' || e.error === 'canceled' ? 'stopped' : 'end');
     // If the engine never starts (sound blocked, or no audio device), go on silently.
     timers.push(setTimeout(() => { if (!started && !finished) { started = true; onStart && onStart({ silent: true }); estimate(); timers.push(setTimeout(() => finish('end'), estMs + 250)); } }, 1800));
-    try { synth.cancel(); } catch { /* fine */ }
-    setTimeout(() => { if (my === token) { try { synth.speak(u); } catch { finish('end'); } } else finish('stopped'); }, 40);
+    // Only when something is still being said does the engine need a moment to clear it.
+    const busy = synth.speaking || synth.pending;
+    if (busy) { try { synth.cancel(); } catch { /* fine */ } }
+    const go = () => { if (my === token) { try { synth.speak(u); } catch { finish('end'); } } else finish('stopped'); };
+    if (busy) setTimeout(go, 40); else go();
     window.__lastUtterance = u; // keeps it from being garbage collected mid-sentence (old Chrome bug)
   });
 }

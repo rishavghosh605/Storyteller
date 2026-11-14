@@ -14,6 +14,7 @@ let pic = { n: 0, pending: null, pendingURL: '' };
 let pendingBook = null;
 let shownTab = '';
 let openFold = '';
+let offNeural = null;
 const GROUPS = {
   journey: [['contents', 'Contents'], ['books', 'My books']],
   workshop: [['texts', 'New pages'], ['pictures', 'Make pictures'], ['images', 'Saved pictures'], ['once', 'Set once']],
@@ -499,15 +500,26 @@ async function renderImages(el) {
 async function renderSettings(el) {
   await voice.whenVoicesReady(800);
   const s = store.settings();
+  const N = ctx.neural;
   const opts = (lang, chosen) => {
     const list = voice.rankedVoices(lang);
-    if (!list.length) return '<option value="">no voice for this language on this device</option>';
-    return list.map((v, i) => `<option value="${esc(v.name)}" ${v.name === (chosen || list[0].name) ? 'selected' : ''}>${i === 0 ? '★ ' : ''}${esc(v.name)} (${esc(v.lang)}${v.localService ? '' : ', online'})</option>`).join('');
+    const neuralPart = Object.entries(N.ENGINES).filter(([, e]) => e.lang === lang).map(([id, e]) =>
+      `<optgroup label="${e.name}: runs in this browser, downloads once">${e.voices.map(([v, name]) => `<option value="${id}:${v}" ${chosen === `${id}:${v}` ? 'selected' : ''}>${e.name} ${esc(name)}</option>`).join('')}</optgroup>`).join('');
+    const pickNow = N.parse(chosen) ? '' : (chosen || list[0]?.name);
+    const own = list.length ? list.map((v, i) => `<option value="${esc(v.name)}" ${v.name === pickNow ? 'selected' : ''}>${i === 0 ? '★ ' : ''}${esc(v.name)} (${esc(v.lang)}${v.localService ? '' : ', online'})</option>`).join('')
+      : '<option value="">no voice for this language on this device</option>';
+    return `${neuralPart}<optgroup label="Voices of this browser">${own}</optgroup>`;
+  };
+  // One quiet line under a list, only while a neural voice is chosen there.
+  const neuralNote = chosen => {
+    const n = N.parse(chosen); if (!n) return '';
+    const st = N.state[n.engine], e = N.ENGINES[n.engine];
+    return st.state === 'ready' ? 'Ready.' : st.state === 'loading' ? `Downloading the voice… ${st.progress}%` : st.state === 'failed' ? 'Could not download the voice. Check the internet connection and press Listen again. Until then a browser voice speaks.' : `Downloads ${e.size} the first time. Press Listen to start.`;
   };
   const left = store.tokenDaysLeft();
   const tokenNote = left === null ? 'Optional. Enter the date GitHub showed you, and the app warns you two weeks before.' : left <= 0 ? 'This token has expired. Make a new one on GitHub and paste it above.' : `Expires in ${left} day${left === 1 ? '' : 's'}.` + (left <= 14 ? ' Make a new one on GitHub soon and paste it above.' : '');
   const short = n => (n || '').replace(/^Microsoft\s+/, '').replace(/\s+Online \(Natural\).*$/, '').replace(/\s+-\s+.*$/, '') || 'none';
-  const pickName = (lang, chosen) => short((voice.pickVoice(lang, chosen) || {}).name);
+  const pickName = (lang, chosen) => N.label(chosen) || short((voice.pickVoice(lang, chosen) || {}).name);
   const level = ctx.sounds.level();
   const loud = v => (v <= 0 ? 'off' : v < 0.34 ? 'quiet' : v < 0.67 ? 'medium' : 'loud');
   const savedIn = { browser: 'this browser only', github: 'GitHub', folder: 'a folder on this computer' }[s.backend];
@@ -516,13 +528,16 @@ async function renderSettings(el) {
     ${fold('voices', 'Voices', `${esc(pickName('en', s.voiceEn))} · ${esc(pickName('de', s.voiceDe))}`, `
       <div class="kv">
         <label>English</label><div class="row"><select id="st-en">${opts('en', s.voiceEn)}</select><button class="btn" data-test="en">Listen</button></div>
+        <label></label><span class="hint" id="st-note-en">${esc(neuralNote(s.voiceEn))}</span>
         <label>Speed</label><input id="st-rate-en" type="range" min="0.6" max="1.1" step="0.05" value="${s.rateEn}">
         <label>Depth</label><input id="st-pitch-en" type="range" min="0.6" max="1.2" step="0.05" value="${s.pitchEn}">
         <label>German</label><div class="row"><select id="st-de">${opts('de', s.voiceDe)}</select><button class="btn" data-test="de">Listen</button></div>
+        <label></label><span class="hint" id="st-note-de">${esc(neuralNote(s.voiceDe))}</span>
         <label>Speed</label><input id="st-rate-de" type="range" min="0.5" max="1.05" step="0.05" value="${s.rateDe}">
       </div>
       <details><summary>Tips for a warmer voice</summary>
         <p>The star marks my pick. Slower and a little deeper sounds more like a grandmother.</p>
+        <p><b>Kokoro</b> (English) and <b>Supertonic</b> (German) are neural voices that run inside this browser, on any browser. They need one large download and a reasonably fast computer. Depth does not apply to them.</p>
         <p><b>Computer:</b> open this page in <b>Microsoft Edge</b>. Its “Online (Natural)” voices are the best free ones: Seraphina, Katja or Amala for German; Sonia, Libby or Emma for English.</p>
         <p><b>iPhone, iPad, Mac:</b> in the system settings under Accessibility, Spoken Content, Voices, download an “Enhanced” or “Premium” voice for German and English. Then reload this page.</p>
         <p><b>Android:</b> install the German voice data in the phone's text-to-speech settings.</p></details>`)}
@@ -562,8 +577,17 @@ async function renderSettings(el) {
   // Only one section is open at a time, and the app remembers which.
   el.querySelectorAll('.fold').forEach(d => { d.ontoggle = () => { if (d.open) { openFold = d.dataset.fold; el.querySelectorAll('.fold').forEach(o => { if (o !== d) o.open = false; }); } else if (openFold === d.dataset.fold) openFold = ''; }; });
   const save = patch => { store.saveSettings(patch); ctx.updateControls(); };
-  $('#st-en').onchange = e => save({ voiceEn: e.target.value });
-  $('#st-de').onchange = e => save({ voiceDe: e.target.value });
+  const notes = () => {
+    const c = store.settings();
+    if (!$('#st-note-en')) return;
+    $('#st-note-en').textContent = neuralNote(c.voiceEn); $('#st-note-de').textContent = neuralNote(c.voiceDe);
+    const sum = el.querySelector('.fold[data-fold=voices] > summary span');
+    if (sum) sum.textContent = `${pickName('en', c.voiceEn)} · ${pickName('de', c.voiceDe)}`;
+  };
+  if (offNeural) offNeural();
+  offNeural = N.onChange(notes);
+  $('#st-en').onchange = e => { save({ voiceEn: e.target.value }); notes(); };
+  $('#st-de').onchange = e => { save({ voiceDe: e.target.value }); notes(); };
   $('#st-rate-en').oninput = e => save({ rateEn: +e.target.value });
   $('#st-pitch-en').oninput = e => save({ pitchEn: +e.target.value });
   $('#st-rate-de').oninput = e => save({ rateDe: +e.target.value });
@@ -571,7 +595,14 @@ async function renderSettings(el) {
     b.onclick = async () => {
       const de = b.dataset.test === 'de', c = store.settings();
       const text = de ? 'Ach ja, mein Schatz. Komm, setz dich zu mir. Ich erzähle dir eine Geschichte.' : 'Ahh, there you are, my dear. Come, sit with me. Let me tell you a story.';
-      for (const part of voice.sentences(text)) if (await voice.speak(part, { lang: de ? 'de-DE' : 'en-GB', voiceName: de ? c.voiceDe : c.voiceEn, rate: de ? c.rateDe : c.rateEn, pitch: de ? c.pitchDe : c.pitchEn, onStart: i => { if (i.silent) ctx.toast('No sound: this device has no voice for this language, or sound is blocked.'); } }) !== 'end') break;
+      const name = de ? c.voiceDe : c.voiceEn, rate = de ? c.rateDe : c.rateEn, n = N.parse(name);
+      if (n) { N.unlock(); try { await N.load(n.engine); } catch { /* the note under the list says why */ } }
+      for (const part of voice.sentences(text)) {
+        let r = 'fallback';
+        if (n) { voice.stop(); r = await N.speak(part, { ...n, rate }); }
+        if (r === 'fallback') r = await voice.speak(part, { lang: de ? 'de-DE' : 'en-GB', voiceName: n ? '' : name, rate, pitch: de ? c.pitchDe : c.pitchEn, onStart: i => { if (i.silent) ctx.toast('No sound: this device has no voice for this language, or sound is blocked.'); } });
+        if (r !== 'end') break;
+      }
     };
   });
   $('#st-mic').onchange = e => { save({ micLang: e.target.value }); if (ctx.ears.on) { ctx.ears.stop(); ctx.setMic(true); } };

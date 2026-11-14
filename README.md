@@ -84,6 +84,8 @@ Layout: `journeys/<book>/journey.json`, `progress.json`, `seq/0001.json`, `img/0
 - **iPhone, iPad, Mac:** download an Enhanced or Premium voice in the system settings (German: Anna or Petra; English: Serena or Kate). The default compact voices sound robotic.
 - **Android:** the Google voices, native German, decent.
 
+**Optional neural voices.** In Settings, Voices, the English list also offers **Kokoro** and the German list **Supertonic 3**. Both run inside the browser, free and without a key, in a background worker so the page stays responsive. Each needs one large download. Lines are made ahead of time, and Grandma's mouth follows the real sound. If a voice cannot load, a browser voice speaks instead.
+
 Honest limits: none of these is a real old woman's voice. The grandmother feeling comes from how the text is written, the slow pace and the pauses. I could not listen to any voice in my build environment (it has no audio and no voices), so the ranking rests on known reputation, not on my ears. Please audition them in Settings.
 
 ### 2. Switch words and speech recognition

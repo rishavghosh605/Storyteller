@@ -137,6 +137,10 @@ export class StoryRoom {
             const line = lines[i];
             if (!line) { await st.pause(lang === 'de' ? 950 : 750); continue; }
             this.p = { seq: seq.n, part, line: i }; this.lastLine = { ...this.p }; this.save();
+            // The next two lines are prepared now. Near the end of the first telling, so is the start of the second.
+            const coming = lines.slice(i + 1).filter(Boolean).slice(0, 2);
+            coming.forEach(l => st.prepare?.(l, lang));
+            if (part === 0 && coming.length < 2) seq[order[1]].filter(Boolean).slice(0, 2).forEach(l => st.prepare?.(l, order[1]));
             const r = await st.say(line, lang, { seq, part, line: i });
             if (r === 'stopped' || !live()) return;
             if (/\[wait\]/i.test(line)) await st.listenWait(6500);
