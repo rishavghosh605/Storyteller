@@ -4,7 +4,7 @@ import * as voice from './voice.js';
 import { Ears, understand, earsSupported } from './ears.js';
 import { StoryRoom } from './story.js';
 import * as tea from './tea.js';
-import { SWITCH } from './format.js';
+import { SWITCH, ago } from './format.js';
 import { lookup } from './words.js';
 import { initPanels, openSheet, closeSheet, sheetOpen } from './panels.js';
 
@@ -31,6 +31,7 @@ const ICONS = {
   gear: '<circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.600 5.600l2.100 2.100M16.300 16.300l2.100 2.100M5.600 18.400l2.100-2.100M16.300 7.700l2.100-2.100"/>',
   left: '<path d="M15 5l-7 7 7 7"/>', right: '<path d="M9 5l7 7-7 7"/>', close: '<path d="M6 6l12 12M18 6L6 18"/>',
   swap: '<path d="M4 8h14l-3-3M20 16H6l3 3"/>', send: '<path d="M4 12l16-8-6 16-3-6z"/>',
+  moon: '<path d="M20 14.500A8 8 0 1 1 9.500 4a6.500 6.500 0 0 0 10.500 10.500z"/>',
   pencil: '<path d="M4 20l1-5L16 4l4 4L9 19zM14 6l4 4"/>',
 };
 export function icon(name) { return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.800" stroke-linecap="round" stroke-linejoin="round">${ICONS[name] || ''}</svg>`; }
@@ -39,7 +40,7 @@ export function paintIcons(root = document) { root.querySelectorAll('[data-icon]
 // ---------- state ----------
 const S = {
   room: 'story', awake: false, speaking: false, speakingText: '', sayId: 0,
-  waiting: null, asked: null, pauses: new Set(), cloudMeta: null, tx: { n: 0 }, lastQuestion: '', soundTimer: null,
+  waiting: null, asked: null, lastOne: false, pauses: new Set(), cloudMeta: null, tx: { n: 0 }, lastQuestion: '', soundTimer: null,
 };
 let cfg = store.settings();
 
@@ -48,6 +49,8 @@ const stage = {
   glue: () => cfg.glue, waitForMe: () => cfg.waitForMe,
   onPlace: () => { updateControls(); updateTop(); },
   outOfPages: () => setAnswers([['Bring new pages', () => openSheet('texts')]]),
+  lastOne: () => S.lastOne,
+  sleep: goToSleep,
 };
 const story = new StoryRoom(stage);
 
@@ -216,6 +219,25 @@ async function greet() {
   ask({ yes: begin, no: later }, [[g.kind === 'fresh' ? 'Yes, let us start' : 'Yes, go on', begin], ['Not yet', later, true]]);
 }
 
+// Bedtime: after her good night she dozes off again, and the place is kept.
+function goToSleep() {
+  S.lastOne = false; S.awake = false;
+  clearAsk();
+  setTimeout(() => { if (!S.awake) { body.classList.add('asleep'); $('#cloud').hidden = true; } }, 1400);
+  updateControls(); updateTop();
+  store.sync().catch(() => {});
+}
+// Jump to any part from the contents list and start telling it.
+function goPart(n) {
+  if (!story.seq(n)) return;
+  closeSheet();
+  if (!S.awake) { S.awake = true; body.classList.remove('asleep'); voice.unlock(); voice.unlockAudio(); if (cfg.mic && !ears.on) ears.start(cfg.micLang); }
+  if (S.room !== 'story') setRoom('story');
+  clearAsk();
+  story.goTo(n);
+  story.play();
+}
+
 // ---------- rooms ----------
 function setRoom(room) {
   S.room = room;
@@ -281,6 +303,11 @@ function act(cmd) {
     case 'slower': cfg = store.saveSettings({ slowDe: true }); updateControls(); if (S.room === 'story' && (story.playing || story.lastLine)) story.repeatLine(); return;
     case 'faster': cfg = store.saveSettings({ slowDe: false }); updateControls(); return;
     case 'words': return openTexts();
+    case 'bedtime':
+      if (S.room !== 'story') return;
+      S.lastOne = !S.lastOne; updateControls();
+      toast(S.lastOne ? 'This part is the last one for tonight. Then Grandma says good night.' : 'All right, no bedtime yet.');
+      return;
     case 'german': case 'english': if (S.asked?.[cmd]) S.asked[cmd](); return;
   }
 }
@@ -314,7 +341,7 @@ function onHeard(text, cmd) {
   if (S.asked) { const k = cmd === 'next' ? 'yes' : cmd; if (S.asked[k]) { S.asked[k](); return; } }
   if (S.waiting) {
     if (cmd === 'pause' || cmd === 'no') { story.pause(); return; }
-    if (['repeat', 'repeatSeq', 'slower', 'faster', 'words'].includes(cmd)) { act(cmd); return; }
+    if (['repeat', 'repeatSeq', 'slower', 'faster', 'words', 'bedtime'].includes(cmd)) { act(cmd); return; }
     nudge(); return; // "hmm", "and then?", or anything else: she goes on
   }
   if (cmd) act(cmd);
@@ -416,12 +443,13 @@ function updateTop() {
   let place = '';
   if (j && total) place = cur ? `Part ${cur.n} of ${story.seqs[total - 1].n}` : `All ${total} parts told`;
   if (S.room === 'tea') place = 'Tea room · ' + (place || 'free chat');
-  $('#top-place').textContent = place;
+  $('#top-place').textContent = place; $('#top-place').hidden = !place;
 }
 function updateControls() {
   cfg = store.settings();
   $('#btn-play').querySelector('[data-icon]').innerHTML = icon(story.playing ? 'pause' : 'play');
   $('#btn-slow').classList.toggle('on', cfg.slowDe);
+  $('#btn-night').classList.toggle('on', S.lastOne);
   $('#btn-cloud').classList.toggle('on', cfg.cloud);
   $('#btn-meanings').classList.toggle('on', cfg.meanings);
   $('#btn-mic').classList.toggle('on', cfg.mic && ears.on);
@@ -447,9 +475,13 @@ export async function copy(text, okMsg = 'Copied.') {
 function syncBadge() {
   const b = $('#sync-badge'), st = store.syncState, be = store.settings().backend;
   if (be === 'browser') { b.hidden = true; return; }
-  b.hidden = false; b.classList.toggle('err', !!st.error);
-  b.textContent = st.busy ? 'Saving…' : st.error ? 'Not saved: tap' : (be === 'github' ? 'Saved to GitHub' : 'Saved to folder');
-  b.title = st.error || '';
+  const days = store.tokenDaysLeft();
+  const tokenSoon = days !== null && days <= 14;
+  b.hidden = false; b.classList.toggle('err', !!st.error); b.classList.toggle('warn', !st.error && tokenSoon);
+  b.textContent = st.busy ? 'Saving…' : st.error ? 'Not saved: tap'
+    : tokenSoon ? (days <= 0 ? 'Token has expired: tap' : `Token expires in ${days} day${days === 1 ? '' : 's'}`)
+    : st.last ? `Saved ${ago(st.last)}` : (be === 'github' ? 'Saved to GitHub' : 'Saved to folder');
+  b.title = st.error || (be === 'github' ? 'Saved in your GitHub repository' : 'Saved in your folder');
 }
 
 async function selectJourney(id) {
@@ -460,6 +492,7 @@ async function selectJourney(id) {
   if (story.current) showPicture(story.current, false);
   else { $('#picture').hidden = true; $('#no-picture').hidden = false; $('#caption').textContent = ''; }
   $('#no-picture-text').textContent = story.journey ? 'The picture for this part is not drawn yet.' : 'Here Grandma shows you a picture for every part.';
+  $('#no-picture-go').hidden = !story.current;
   updateTop(); updateControls(); renderTexts();
 }
 async function refresh() {
@@ -500,7 +533,13 @@ function wire() {
   $('#btn-workshop').onclick = () => openSheet('texts');
   $('#btn-images').onclick = () => openSheet('images');
   $('#btn-settings').onclick = () => openSheet('settings');
-  $('#sync-badge').onclick = () => { if (store.syncState.error) openSheet('settings'); };
+  $('#sync-badge').onclick = () => { if (store.syncState.error || $('#sync-badge').classList.contains('warn')) openSheet('settings'); };
+  setInterval(syncBadge, 30000);
+  $('#top-place').onclick = () => openSheet('contents');
+  $('#btn-night').onclick = () => act('bedtime');
+  const toPicture = () => (story.current ? openSheet('pictures', { n: story.current.n }) : openSheet(story.journey ? 'texts' : 'books'));
+  $('#no-picture').onclick = toPicture;
+  $('#no-picture').onkeydown = e => { if (e.key === 'Enter') toPicture(); };
   $('#tea-form').onsubmit = e => { e.preventDefault(); const v = $('#tea-input').value; $('#tea-input').value = ''; teaHear(v); };
   $('#btn-ask-claude').onclick = () => copy(tea.askClaudeText(S.lastQuestion, story.view()), 'Copied. Paste it into Claude.');
 
@@ -568,7 +607,7 @@ async function boot(again) {
   }
 }
 
-export const ctx = { paintIcons, icon, story, selectJourney, refresh, toast, copy, hush, imageURL, say, setMic, updateControls, ears, understand };
+export const ctx = { goPart, paintIcons, icon, story, selectJourney, refresh, toast, copy, hush, imageURL, say, setMic, updateControls, ears, understand };
 wire();
 initPanels(ctx);
 boot();

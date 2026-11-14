@@ -33,7 +33,7 @@
 
 <header id="top">
   <button id="btn-books" class="chip" title="My books (journeys)"><span data-icon="books"></span><span id="top-title">Grandma Storyteller</span></button>
-  <span id="top-place"></span>
+  <button id="top-place" class="chip place" title="Contents: all parts of this journey" hidden></button>
   <span class="spacer"></span>
   <span id="sync-badge" class="badge" hidden></span>
   <button id="btn-workshop" class="chip" title="Workshop: bring new pages and pictures"><span data-icon="quill"></span><span class="lbl">Workshop</span></button>
@@ -123,7 +123,7 @@
     <figure id="paper" class="paper empty">
       <div id="paper-inner">
         <img id="picture" alt="" hidden>
-        <div id="no-picture"><span data-icon="pencil"></span><p id="no-picture-text">The picture for this part is not drawn yet.</p></div>
+        <div id="no-picture" role="button" tabindex="0"><span data-icon="pencil"></span><p id="no-picture-text">The picture for this part is not drawn yet.</p><small id="no-picture-go">Tap to make it</small></div>
       </div>
       <figcaption id="caption"></figcaption>
     </figure>
@@ -137,6 +137,7 @@
     <button id="btn-play" class="ctl main" title="Tell / pause (space)"><span data-icon="play"></span></button>
     <button id="btn-next" class="ctl" title="And then? Go on (right arrow)"><span data-icon="next"></span><small>And then?</small></button>
     <button id="btn-slow" class="ctl toggle" title="Slower German"><span data-icon="turtle"></span><small>Slow German</small></button>
+    <button id="btn-night" class="ctl toggle" title="Bedtime: this part is the last one for tonight"><span data-icon="moon"></span><small>Last one</small></button>
   </div>
   <form id="tea-form" class="group tea-only" autocomplete="off">
     <input id="tea-input" type="text" placeholder="Say it, or write it here for Grandma…" aria-label="Talk to Grandma">
@@ -173,6 +174,7 @@
   <div class="sheet-card" role="dialog" aria-modal="true">
     <nav id="tabs" class="tabs">
       <button data-tab="books">Books</button>
+      <button data-tab="contents">Contents</button>
       <button data-tab="once">Set once</button>
       <button data-tab="texts">Texts</button>
       <button data-tab="pictures">Make pictures</button>

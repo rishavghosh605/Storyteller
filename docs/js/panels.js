@@ -1,7 +1,7 @@
 // Books, the workshop (set once, texts, pictures), images and settings.
 import * as store from './store.js';
 import * as voice from './voice.js';
-import { fileToBook, cut, cursorAfter } from './book.js';
+import { fileToBook, cut, cursorAfter, findChapters } from './book.js';
 import { parseBatch, textRequest, pictureRequest, claudeInstruction, chatgptInstruction, SIZES, SWITCH, slug, INSTRUCTIONS_UPDATED, stamp, ago } from './format.js';
 import { localAIAvailable } from './tea.js';
 import { earsSupported } from './ears.js';
@@ -16,8 +16,9 @@ let shownTab = '';
 
 export const sheetOpen = () => !$('#sheet').hidden;
 export function closeSheet() { $('#sheet').hidden = true; }
-export function openSheet(t) {
+export function openSheet(t, opts) {
   tab = t || tab;
+  if (opts?.n) pic.n = opts.n;
   ctx.story.pause();
   shownTab = '';
   $('#sheet').hidden = false;
@@ -42,7 +43,7 @@ const storageName = () => ({ browser: 'this browser only', github: 'your GitHub 
 async function render() {
   document.querySelectorAll('#tabs [data-tab]').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
   const el = $('#sheet-body');
-  const fn = { books: renderBooks, once: renderOnce, texts: renderTexts, pictures: renderPictures, images: renderImages, settings: renderSettings }[tab];
+  const fn = { contents: renderContents, books: renderBooks, once: renderOnce, texts: renderTexts, pictures: renderPictures, images: renderImages, settings: renderSettings }[tab];
   // Stay where you are when the same tab redraws (next prompt, a saved picture). Start at the top on a new tab.
   const keep = tab === shownTab ? el.scrollTop : 0;
   await fn(el);
@@ -67,6 +68,7 @@ async function importBatch(parsed, raw) {
     await store.saveSequence(j.id, { ...old, prompt: p.prompt, labels: p.labels, layout: p.layout });
   }
   j.cursor = cursor;
+  if (parsed.sequences.length) j.lastTextsAt = Date.now();
   await store.saveJourney(j);
   const ns = [...parsed.sequences, ...parsed.pictures].map(x => x.n);
   const kind = parsed.sequences.length ? 'texts' : 'pictures';
@@ -119,6 +121,44 @@ function uploader(box, want, onSaved) {
   box.querySelector('[data-read]').onclick = () => take(box.querySelector('[data-text]').value);
 }
 
+// ---------- Contents ----------
+// Every part of the journey, grouped by the book's chapters. The descriptions are the
+// recaps that came with the texts, shown only for parts that were already told.
+async function renderContents(el) {
+  const j = journey();
+  if (!j) return needJourney(el);
+  const seqs = ctx.story.seqs;
+  if (!seqs.length) { el.innerHTML = `<h2>Contents of “${esc(j.title)}”</h2><p>No parts yet. Bring the first pages under <b>Texts</b>.</p>`; return; }
+  if (!j.chapters) {
+    const book = await bookOf(j.id);
+    if (book) { j.chapters = findChapters(book); await store.saveJourney(j); }
+  }
+  const chapters = j.chapters || [];
+  const p = ctx.story.p;
+  const curIdx = ctx.story.index(p.seq);
+  const chapterOf = q => { let c = -1; chapters.forEach((ch, k) => { if (q.pages && ch.page <= q.pages[0]) c = k; }); return c; };
+  let html = '', last = null;
+  for (const q of seqs) {
+    const k = chapters.length ? chapterOf(q) : null;
+    if (chapters.length && k !== last) { html += `<h3>${esc(k < 0 ? 'Before the first chapter' : chapters[k].title)}</h3>`; last = k; }
+    const i = ctx.story.index(q.n);
+    const state = curIdx < 0 || i < curIdx ? 'told' : i === curIdx ? 'now' : 'later';
+    const img = await ctx.imageURL(await store.imagePath(j.id, q.n));
+    const pages = q.pages ? (q.pages[0] === q.pages[1] ? `p. ${q.pages[0]}` : `pp. ${q.pages[0]} to ${q.pages[1]}`) : '';
+    html += `<button class="toc-row ${state}" data-n="${q.n}" title="Hear this part">
+      ${img ? `<img class="toc-thumb" src="${img}" alt="">` : '<span class="toc-thumb" data-icon="pencil"></span>'}
+      <span><span class="toc-t">${q.n}. ${esc(q.title?.en || 'Part ' + q.n)}<small>${esc(q.title?.de || '')}</small></span>
+        ${state !== 'later' && q.recap ? `<span class="toc-d">${esc(q.recap)}</span>` : ''}</span>
+      <span class="toc-s">${state === 'now' ? '▶ you are here' : state === 'told' ? '✓ told' : 'not told yet'}${pages ? ' · ' + pages : ''}</span>
+    </button>`;
+  }
+  el.innerHTML = `<h2>Contents of “${esc(j.title)}”</h2>
+    <p class="hint">Tap a part to hear it. What a part is about appears once Grandma has told it, so nothing is given away.${chapters.length ? '' : ' Attach the book file under Books to see the chapters here.'}</p>
+    <div class="toc">${html}</div>`;
+  el.querySelectorAll('.toc-row').forEach(b => { b.onclick = () => ctx.goPart(+b.dataset.n); });
+  if (shownTab !== 'contents') requestAnimationFrame(() => el.querySelector('.toc-row.now')?.scrollIntoView({ block: 'center' }));
+}
+
 // ---------- Books ----------
 async function renderBooks(el) {
   const js = await store.journeys();
@@ -130,10 +170,17 @@ async function renderBooks(el) {
     const told = seqs.filter(s => s.n < p.seq).length;
     const hasBook = !!(await store.getRec(`local/${j.id}/book.json`));
     const upTo = Math.max(0, (j.cursor?.page || 1) - 1);
+    let added = j.lastTextsAt ? ago(j.lastTextsAt) : '';
+    if (!added) {
+      // Older journeys: take the date from the newest saved batch file.
+      const day = (await store.list(store.jpath(j.id, 'batches/'))).filter(x => /-texts-/.test(x)).map(x => x.split('/').pop().slice(0, 10)).sort().pop();
+      if (day) { const d = Math.round((Date.now() - new Date(day + 'T12:00:00').getTime()) / 86400000); added = d <= 0 ? 'today' : d === 1 ? 'yesterday' : ago(Date.now() - d * 86400000); }
+    }
     cards.push(`<div class="bookcard ${j.id === cur ? 'current' : ''}" data-id="${esc(j.id)}">
       <h3>${esc(j.title)}</h3>
       <div class="meta">${j.author ? esc(j.author) + ' · ' : ''}${told} of ${seqs.length} parts told · pages prepared: ${upTo}${j.pages ? ' of ' + j.pages : ''}</div>
       <div class="bar"><i style="width:${j.pages ? Math.min(100, upTo / j.pages * 100) : 0}%"></i></div>
+      ${added ? `<div class="meta">Last pages added ${added}</div>` : ''}
       <div class="row"><label>Sequence size <select data-size>${Object.entries(SIZES).map(([k, v]) => `<option value="${k}" ${j.size === k ? 'selected' : ''}>${v.label}</option>`).join('')}</select></label></div>
       <div class="row"><label>Begins in <select data-start><option value="">ask me</option><option value="de" ${j.startLang === 'de' ? 'selected' : ''}>German first</option><option value="en" ${j.startLang === 'en' ? 'selected' : ''}>English first</option></select></label></div>
       ${hasBook ? '' : `<div class="note info">The book file is not in this browser. Grandma can still tell what is prepared. To prepare new pages with exact borders, attach it: <label class="btn"><input type="file" accept=".pdf,.txt,application/pdf,text/plain" hidden data-attach>Attach book file</label></div>`}
@@ -165,7 +212,7 @@ async function renderBooks(el) {
     if (att) att.onchange = async () => {
       const f = att.files[0]; if (!f) return;
       ctx.toast('Reading the book…', 60000);
-      try { const b = await fileToBook(f); await store.putJSON(`local/${id}/book.json`, { pageCount: b.pageCount, sents: b.sents }); await upd({ pages: b.pageCount }); ctx.toast('The book is attached.'); render(); }
+      try { const b = await fileToBook(f); await store.putJSON(`local/${id}/book.json`, { pageCount: b.pageCount, sents: b.sents }); await upd({ pages: b.pageCount, chapters: findChapters(b) }); ctx.toast('The book is attached.'); render(); }
       catch (e) { ctx.toast('Could not read this file: ' + e.message, 6000); }
     };
   });
@@ -188,6 +235,7 @@ async function renderBooks(el) {
     const old = await store.journey(id);
     const j = old || { id, title, author: $('#bk-author').value.trim(), size: 'page1', startLang: '', created: Date.now(), cursor: { page: 1, i: 0 } };
     j.pages = pendingBook.pageCount;
+    j.chapters = findChapters(pendingBook);
     await store.saveJourney(j);
     await store.putJSON(`local/${id}/book.json`, { pageCount: pendingBook.pageCount, sents: pendingBook.sents });
     pendingBook = null;
@@ -434,6 +482,8 @@ async function renderSettings(el) {
     if (!list.length) return '<option value="">no voice for this language on this device</option>';
     return list.map((v, i) => `<option value="${esc(v.name)}" ${v.name === (chosen || list[0].name) ? 'selected' : ''}>${i === 0 ? '★ ' : ''}${esc(v.name)} (${esc(v.lang)}${v.localService ? '' : ', online'})</option>`).join('');
   };
+  const left = store.tokenDaysLeft();
+  const tokenNote = left === null ? 'Optional. Enter the date GitHub showed you, and the app warns you two weeks before.' : left <= 0 ? 'This token has expired. Make a new one on GitHub and paste it above.' : `Expires in ${left} day${left === 1 ? '' : 's'}.` + (left <= 14 ? ' Make a new one on GitHub soon and paste it above.' : '');
   el.innerHTML = `<h2>Settings</h2>
     <div class="step"><h3>Grandma's voices</h3>
       <p class="hint">These are the free voices of this browser and device. The star marks the one I would pick. Listen and choose the warmest one.</p>
@@ -467,6 +517,7 @@ async function renderSettings(el) {
           <label>Repository</label><input id="gh-repo" type="text" value="${esc(s.ghRepo)}" placeholder="for example storyteller-library">
           <label>Branch</label><input id="gh-branch" type="text" value="${esc(s.ghBranch)}">
           <label>Token</label><input id="gh-token" type="password" value="${esc(s.ghToken)}" placeholder="github_pat_…" autocomplete="off">
+          <label>Token expires</label><div class="row"><input id="gh-expires" type="date" value="${esc((s.ghTokenExpires || '').slice(0, 10))}"><span class="hint">${tokenNote}</span></div>
         </div>
         <p class="hint">Make a <b>fine-grained personal access token</b> on GitHub (Settings, Developer settings) for <b>only this one repository</b>, with the permission <b>Contents: Read and write</b>. The token stays in this browser on this device and is sent only to api.github.com. Files go to the branch named above, which the app creates. A <b>private</b> repository is best, because your texts and pictures are derived from a book.</p>
       </div>
@@ -499,6 +550,7 @@ async function renderSettings(el) {
   if ($('#st-ai')) $('#st-ai').onchange = e => save({ localAI: e.target.checked });
   el.querySelectorAll('input[name=be]').forEach(r => { r.onchange = () => { save({ backend: r.value }); $('#st-gh').hidden = r.value !== 'github'; $('#st-folder').hidden = r.value !== 'folder'; }; });
   for (const [id, key] of [['gh-owner', 'ghOwner'], ['gh-repo', 'ghRepo'], ['gh-branch', 'ghBranch'], ['gh-token', 'ghToken']]) $('#' + id).onchange = e => save({ [key]: e.target.value.trim() });
+  $('#gh-expires').onchange = e => { save({ ghTokenExpires: e.target.value ? new Date(e.target.value + 'T23:59:59').toISOString() : '' }); render(); };
   $('#st-pick').onclick = async () => { try { $('#st-folder-name').textContent = 'Folder: ' + await store.chooseFolder(); } catch (e) { if (e.name !== 'AbortError') ctx.toast(e.message, 6000); } };
   store.kvGet('folder').then(h => { if (h && $('#st-folder-name')) $('#st-folder-name').textContent = 'Folder: ' + h.name; });
   $('#st-sync').onclick = async () => {

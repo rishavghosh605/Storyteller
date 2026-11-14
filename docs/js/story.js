@@ -12,6 +12,12 @@ export const GLUE = {
   picture: ['Look, dear. I have a picture for this part.', 'Ahh, here. Look at this one first.', 'Hmm, wait. First the picture. Look.'],
   goOn: ['Shall I go on, dear?', 'Hmm. Shall we turn the page?', 'And then? Shall I tell you?'],
   noMore: ['Ahh. That is as far as my pages go, my dear. Bring me new ones, and I will tell you more.'],
+  night: [
+    'Ahh. And that is enough for tonight, my dear. My eyes are getting heavy, and I think yours are too. The book will keep our page. Sleep well, and dream something lovely.',
+    'Hmm. There we stop, little one. I am going to close my eyes now. You close yours too. Good night, my dear. Sleep tight.',
+    'So. That was the last one for today. Off to bed with you, and with me. Good night, my dear. I will be right here tomorrow, in my chair.',
+    'Oh, I am going now, my dear. This is enough for one evening. Tuck yourself in warm. Have a good night, and sleep well.',
+  ],
   again: ['Of course, dear. Once more.', 'Hmm, yes. Listen again.'],
   slower: ['Oh, was I too quick? Slowly now.', 'Yes, yes. Nice and slowly.'],
 };
@@ -133,6 +139,13 @@ export class StoryRoom {
         const next = this.seqs[this.index(seq.n) + 1];
         this.p = { seq: next ? next.n : seq.n + 1, part: 0, line: 0 };
         this.save();
+        if (st.lastOne?.()) {
+          // Bedtime: she finishes the part, says good night and dozes off. No question.
+          await st.pause(700);
+          await st.say(pick(GLUE.night), 'en', { glue: true });
+          if (live()) { this.playing = false; st.sleep?.(); }
+          return;
+        }
         if (!next) { await st.pause(600); await st.say(pick(GLUE.noMore), 'en', { glue: true }); st.outOfPages?.(); break; }
         await st.pause(500);
         if (await st.say(pick(GLUE.goOn), 'en', { glue: true }) === 'stopped') return;

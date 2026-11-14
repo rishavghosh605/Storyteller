@@ -51,6 +51,8 @@ Pictures:
 
 In the read-along panel, tap a line to hear the story from there.
 
+**Contents** (the "Part 3 of 18" chip at the top) lists every part under the book's chapters, with its picture and a short description once it has been told. Tap a part to hear it. **Last one** makes the current part the last for tonight: Grandma finishes it, says good night and dozes off.
+
 ## Where things are saved
 
 Choose in **Settings**:

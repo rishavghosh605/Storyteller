@@ -12,6 +12,7 @@ const STORY = /\b(story\s?-?times?|storey\s?-?time|stori\s?-?time|story\s?-?tim|
 const COMMANDS = [
   ['slower', /\b(slower|more slowly|slow down|langsamer)\b/i],
   ['faster', /\b(faster|normal speed|schneller)\b/i],
+  ['bedtime', /\b(last one|last part|this is the last|one more and then|then (i|we) (go to )?(sleep|bed)|bedtime|noch eine(n|s)? und dann|letzte(r|s)? teil)\b/i],
   ['repeatSeq', /\b(whole (part|thing) again|(repeat|again) (the )?(sequence|part|page|pages|whole)|from the (start|beginning|top)|von vorne|alles noch ?(ein)?mal)\b/i],
   ['repeat', /\b(again|repeat|once more|say that again|pardon|what did you say|noch ?(ein)?mal|wie bitte|wiederhol\w*)\b/i],
   ['pause', /\b(stop|wait|pause|hold on|one moment|just a moment|moment mal|warte|halt)\b/i],

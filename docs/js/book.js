@@ -189,3 +189,20 @@ export function cursorAfter(ref, pages, book) {
   if (S?.length) { const k = S.findIndex(x => x.p > last); c.i = k < 0 ? S.length : k; }
   return c;
 }
+
+// Chapter headings found in the book itself, for the contents list. No AI needed.
+const HEADING = /^(?:(?:\S+\s+){0,2}(?:KAPITEL|CHAPTER|CHAPITRE|CAP[IÍ]TULO|CAPITOLO)\b|(?:KAPITEL|CHAPTER|CHAPITRE|CAP[IÍ]TULO|CAPITOLO)\s+\S+)\s*[:.]?\s*$/i;
+const tidy = t => (t === t.toUpperCase() ? t.toLowerCase().replace(/(^|\s)(\p{L})/gu, (m, a, b) => a + b.toUpperCase()) : t).replace(/\s*[:.]\s*$/, '');
+export function findChapters(book) {
+  const S = book?.sents || [];
+  const out = [];
+  for (let i = 0; i < S.length; i++) {
+    const t = S[i].t.trim();
+    if (t.length > 60 || !HEADING.test(t)) continue;
+    // The line after "Erstes Kapitel:" is usually the chapter's name.
+    const next = S[i + 1];
+    const named = next && next.q !== S[i].q && next.t.length < 90 && next.p <= S[i].p + 1 && (!S[i + 2] || S[i + 2].q !== next.q);
+    out.push({ page: S[i].p, i, title: tidy(t) + (named ? ': ' + next.t.trim() : '') });
+  }
+  return out;
+}

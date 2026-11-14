@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { parseBatch, textRequest, pictureRequest, claudeInstruction, chatgptInstruction, INSTRUCTIONS_UPDATED, stamp, ago } from '../docs/js/format.js';
-import { cut, cursorAfter, textToBook, linesToParas, parasToSents } from '../docs/js/book.js';
+import { cut, cursorAfter, textToBook, linesToParas, parasToSents, findChapters } from '../docs/js/book.js';
 import { understand } from '../docs/js/ears.js';
 import { reply } from '../docs/js/tea.js';
 
@@ -151,4 +151,17 @@ test('instruction dates are kept up to date', () => {
   assert.equal(ago('2026-11-14T16:49:30Z', now), 'just now');
   assert.equal(ago('2026-11-11T16:50:00Z', now), '3 days ago');
   assert.equal(ago('2026-08-14T16:50:00Z', now), '3 months ago');
+});
+
+test('chapters are found in the book itself', () => {
+  const S = (p, q, t) => ({ p, q, t });
+  const book = { sents: [
+    S(1, 0, 'Ein Buch'), S(5, 1, 'ERSTES KAPITEL:'), S(5, 2, 'Eine Stadt und ein Kind'), S(6, 3, 'Es war einmal eine Stadt.'), S(6, 3, 'Sie war groß.'),
+    S(30, 9, 'In diesem Kapitel passiert viel, sagte er.'), S(40, 12, 'Chapter 2'), S(40, 13, 'It began to rain, and nobody minded at all.'), S(40, 13, 'They walked on.'),
+  ] };
+  assert.deepEqual(findChapters(book), [
+    { page: 5, i: 1, title: 'Erstes Kapitel: Eine Stadt und ein Kind' },
+    { page: 40, i: 6, title: 'Chapter 2' },
+  ]);
+  assert.deepEqual(findChapters(null), []);
 });

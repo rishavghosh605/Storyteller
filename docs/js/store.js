@@ -36,6 +36,7 @@ async function tx(store, mode, fn) {
 export const DEFAULTS = {
   backend: 'browser',          // 'browser' | 'github' | 'folder'
   ghOwner: '', ghRepo: '', ghBranch: 'library', ghToken: '',
+  ghTokenExpires: '',          // ISO date, read from GitHub when possible or typed in Settings
   voiceEn: '', voiceDe: '',
   enEngine: 'browser',         // 'browser' | 'kokoro' (neural voice that runs in the browser)
   kokoroVoice: 'bf_lily',
@@ -113,6 +114,7 @@ function githubBackend(s) {
   const headers = { Authorization: `Bearer ${s.ghToken}`, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' };
   async function api(path, opt = {}) {
     const r = await fetch(base + path, { ...opt, headers: { ...headers, ...(opt.headers || {}) }, cache: 'no-store' });
+    noteTokenExpiry(r);
     if (!r.ok && !(opt.ok || []).includes(r.status)) {
       let msg = '';
       try { msg = (await r.json()).message; } catch { /* no body */ }
@@ -158,6 +160,22 @@ function githubBackend(s) {
       return tags;
     },
   };
+}
+
+// GitHub says in a response header when a token expires. A web page may not always be allowed to read it.
+function noteTokenExpiry(r) {
+  try {
+    const raw = r.headers.get('github-authentication-token-expiration');
+    if (!raw) return;
+    const d = new Date(raw.replace(' UTC', 'Z').replace(' ', 'T'));
+    if (!isNaN(d) && settings().ghTokenExpires !== d.toISOString()) saveSettings({ ghTokenExpires: d.toISOString() });
+  } catch { /* header not readable */ }
+}
+export function tokenDaysLeft() {
+  const s = settings();
+  if (s.backend !== 'github' || !s.ghTokenExpires) return null;
+  const d = new Date(s.ghTokenExpires);
+  return isNaN(d) ? null : Math.ceil((d.getTime() - Date.now()) / 86400000);
 }
 
 async function folderBackend() {
