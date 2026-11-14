@@ -193,16 +193,28 @@ export function cursorAfter(ref, pages, book) {
 // Chapter headings found in the book itself, for the contents list. No AI needed.
 const HEADING = /^(?:(?:\S+\s+){0,2}(?:KAPITEL|CHAPTER|CHAPITRE|CAP[IÍ]TULO|CAPITOLO)\b|(?:KAPITEL|CHAPTER|CHAPITRE|CAP[IÍ]TULO|CAPITOLO)\s+\S+)\s*[:.]?\s*$/i;
 const tidy = t => (t === t.toUpperCase() ? t.toLowerCase().replace(/(^|\s)(\p{L})/gu, (m, a, b) => a + b.toUpperCase()) : t).replace(/\s*[:.]\s*$/, '');
+// A heading in capitals that opens a sentence, such as "ZWEITES KAPITEL: ...". The name may follow in the same sentence.
+const HEAD_START = /(?:^|\s)((?:[\p{Lu}][\p{Lu}-]*\s+)?(?:KAPITEL|CHAPTER|CHAPITRE|CAP[IÍ]TULO|CAPITOLO)(?:\s+[\dIVXLC]+)?)\s*[:.]?\s*(.*)$/u;
 export function findChapters(book) {
   const S = book?.sents || [];
   const out = [];
   for (let i = 0; i < S.length; i++) {
     const t = S[i].t.trim();
-    if (t.length > 60 || !HEADING.test(t)) continue;
-    // The line after "Erstes Kapitel:" is usually the chapter's name.
-    const next = S[i + 1];
-    const named = next && next.q !== S[i].q && next.t.length < 90 && next.p <= S[i].p + 1 && (!S[i + 2] || S[i + 2].q !== next.q);
-    out.push({ page: S[i].p, i, title: tidy(t) + (named ? ': ' + next.t.trim() : '') });
+    const m = t.match(HEAD_START);
+    let head = '', rest = '';
+    if (m) { head = m[1]; rest = m[2].trim(); }
+    else if (t.length <= 60 && HEADING.test(t)) head = t;
+    else continue;
+    let name = '';
+    if (rest) name = rest.length < 90 ? rest : '';
+    else {
+      // The line after "Erstes Kapitel:" is usually the chapter's name.
+      const next = S[i + 1];
+      // A chapter name stands alone as a paragraph, or at least does not end like an ordinary sentence.
+      const alone = next && next.q !== S[i].q && (!S[i + 2] || S[i + 2].q !== next.q);
+      if (next && next.t.length < 90 && next.p <= S[i].p + 1 && !HEAD_START.test(next.t) && (alone || !/[.!?…]["“”»]?$/.test(next.t.trim()))) name = next.t.trim();
+    }
+    out.push({ page: S[i].p, i, title: tidy(head) + (name ? ': ' + name.replace(/\s*[.]\s*$/, '') : '') });
   }
   return out;
 }

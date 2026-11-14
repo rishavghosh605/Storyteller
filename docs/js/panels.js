@@ -129,9 +129,9 @@ async function renderContents(el) {
   if (!j) return needJourney(el);
   const seqs = ctx.story.seqs;
   if (!seqs.length) { el.innerHTML = `<h2>Contents of “${esc(j.title)}”</h2><p>No parts yet. Bring the first pages under <b>Texts</b>.</p>`; return; }
-  if (!j.chapters) {
+  if (!j.chapters || j.chaptersV !== 2) {
     const book = await bookOf(j.id);
-    if (book) { j.chapters = findChapters(book); await store.saveJourney(j); }
+    if (book) { j.chapters = findChapters(book); j.chaptersV = 2; await store.saveJourney(j); }
   }
   const chapters = j.chapters || [];
   const p = ctx.story.p;
@@ -212,7 +212,7 @@ async function renderBooks(el) {
     if (att) att.onchange = async () => {
       const f = att.files[0]; if (!f) return;
       ctx.toast('Reading the book…', 60000);
-      try { const b = await fileToBook(f); await store.putJSON(`local/${id}/book.json`, { pageCount: b.pageCount, sents: b.sents }); await upd({ pages: b.pageCount, chapters: findChapters(b) }); ctx.toast('The book is attached.'); render(); }
+      try { const b = await fileToBook(f); await store.putJSON(`local/${id}/book.json`, { pageCount: b.pageCount, sents: b.sents }); await upd({ pages: b.pageCount, chapters: findChapters(b), chaptersV: 2 }); ctx.toast('The book is attached.'); render(); }
       catch (e) { ctx.toast('Could not read this file: ' + e.message, 6000); }
     };
   });
@@ -235,7 +235,7 @@ async function renderBooks(el) {
     const old = await store.journey(id);
     const j = old || { id, title, author: $('#bk-author').value.trim(), size: 'page1', startLang: '', created: Date.now(), cursor: { page: 1, i: 0 } };
     j.pages = pendingBook.pageCount;
-    j.chapters = findChapters(pendingBook);
+    j.chapters = findChapters(pendingBook); j.chaptersV = 2;
     await store.saveJourney(j);
     await store.putJSON(`local/${id}/book.json`, { pageCount: pendingBook.pageCount, sents: pendingBook.sents });
     pendingBook = null;

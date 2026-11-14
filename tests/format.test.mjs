@@ -157,11 +157,12 @@ test('chapters are found in the book itself', () => {
   const S = (p, q, t) => ({ p, q, t });
   const book = { sents: [
     S(1, 0, 'Ein Buch'), S(5, 1, 'ERSTES KAPITEL:'), S(5, 2, 'Eine Stadt und ein Kind'), S(6, 3, 'Es war einmal eine Stadt.'), S(6, 3, 'Sie war groß.'),
-    S(30, 9, 'In diesem Kapitel passiert viel, sagte er.'), S(40, 12, 'Chapter 2'), S(40, 13, 'It began to rain, and nobody minded at all.'), S(40, 13, 'They walked on.'),
+    S(30, 9, 'In diesem Kapitel passiert viel, sagte er.'), S(33, 10, 'ZWEITES KAPITEL: Ein Sturm und ein Gewitter'), S(34, 11, 'Es regnet.'), S(40, 12, 'Chapter 2'), S(40, 13, 'It began to rain, and nobody minded at all.'), S(40, 13, 'They walked on.'),
   ] };
   assert.deepEqual(findChapters(book), [
     { page: 5, i: 1, title: 'Erstes Kapitel: Eine Stadt und ein Kind' },
-    { page: 40, i: 6, title: 'Chapter 2' },
+    { page: 33, i: 6, title: 'Zweites Kapitel: Ein Sturm und ein Gewitter' },
+    { page: 40, i: 8, title: 'Chapter 2' },
   ]);
   assert.deepEqual(findChapters(null), []);
 });
