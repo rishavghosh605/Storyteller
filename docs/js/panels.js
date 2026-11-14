@@ -12,12 +12,14 @@ let ctx = null;
 let tab = 'books';
 let pic = { n: 0, pending: null, pendingURL: '' };
 let pendingBook = null;
+let shownTab = '';
 
 export const sheetOpen = () => !$('#sheet').hidden;
 export function closeSheet() { $('#sheet').hidden = true; }
 export function openSheet(t) {
   tab = t || tab;
   ctx.story.pause();
+  shownTab = '';
   $('#sheet').hidden = false;
   render();
 }
@@ -41,8 +43,10 @@ async function render() {
   document.querySelectorAll('#tabs [data-tab]').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
   const el = $('#sheet-body');
   const fn = { books: renderBooks, once: renderOnce, texts: renderTexts, pictures: renderPictures, images: renderImages, settings: renderSettings }[tab];
-  el.scrollTop = 0;
+  // Stay where you are when the same tab redraws (next prompt, a saved picture). Start at the top on a new tab.
+  const keep = tab === shownTab ? el.scrollTop : 0;
   await fn(el);
+  el.scrollTop = keep; shownTab = tab;
   ctx.paintIcons(el);
 }
 const needJourney = el => { el.innerHTML = '<h2>No book yet</h2><p>Choose or add a book first, under <b>Books</b>.</p>'; };
