@@ -89,6 +89,7 @@ function uploader(box, want, onSaved) {
     const warns = [...parsed.warnings];
     if (parsed.journey && parsed.journey !== j.id) warns.unshift(`This file was made for the journey "${parsed.journey}", but you are in "${j.id}".`);
     if (want === 'texts' && !seqN.length && picN.length) warns.unshift('This file contains picture prompts, not texts. That is fine, they will be saved as prompts.');
+    if (want === 'pictures' && seqN.length && !picN.length) warns.unshift('This is the texts file. It holds the story only, no picture prompts. For pictures, copy the request above, paste it into Claude, and bring the file whose name contains "pictures".');
     const any = seqN.length + picN.length > 0;
     out.innerHTML = `
       ${any ? `<div class="note ok">Found ${seqN.length ? `<b>${seqN.length} ${seqN.length === 1 ? 'sequence' : 'sequences'}</b> (${span(seqN)})` : ''}${seqN.length && picN.length ? ' and ' : ''}${picN.length ? `<b>${picN.length} picture ${picN.length === 1 ? 'prompt' : 'prompts'}</b> (${span(picN)})` : ''}.</div>` : ''}
@@ -98,7 +99,7 @@ function uploader(box, want, onSaved) {
     const save = out.querySelector('[data-save]');
     if (save) save.onclick = async () => {
       save.disabled = true; save.textContent = 'Saving…';
-      try { await importBatch(parsed, text); ctx.toast('Saved. Grandma has new pages.'); onSaved && onSaved(parsed); }
+      try { await importBatch(parsed, text); ctx.toast(parsed.sequences.length && !parsed.pictures.length ? 'Saved. Grandma has new pages. Pictures are a separate step.' : 'Saved.'); onSaved && onSaved(parsed); }
       catch (e) { out.insertAdjacentHTML('beforeend', `<div class="note warn">${esc(e.message)}</div>`); save.disabled = false; save.textContent = 'Save to my journey'; }
     };
   };
@@ -238,8 +239,10 @@ async function renderTexts(el) {
   const firstN = (withText.length ? Math.max(...withText.map(s => s.n)) : 0) + 1;
   const p = await store.progress(j.id);
   const untold = withText.filter(s => s.n >= (p.seq || 1)).length;
+  const noPic = withText.filter(s => !s.prompt).length;
   el.innerHTML = `<h2>Texts for “${esc(j.title)}”</h2>
     <p class="hint">${withText.length} parts are prepared, ${untold} of them not told yet. Pages prepared: ${Math.max(0, (j.cursor?.page || 1) - 1)}${j.pages ? ' of ' + j.pages : ''}.</p>
+    ${noPic ? `<div class="note info">${noPic === 1 ? '1 part has' : noPic + ' parts have'} texts but no picture prompt yet. The texts file does not contain pictures. <button class="btn" id="tx-to-pics">Go to Pictures</button></div>` : ''}
     <div class="step"><h3><span class="num">1</span>Ask Claude for the next pages</h3>
       <div class="row">
         <label>Sequence size <select id="tx-size">${Object.entries(SIZES).map(([k, v]) => `<option value="${k}" ${j.size === k ? 'selected' : ''}>${v.label}</option>`).join('')}</select></label>
@@ -267,6 +270,7 @@ async function renderTexts(el) {
   $('#tx-count').oninput = build; $('#tx-page').oninput = build;
   if ($('#tx-include')) $('#tx-include').onchange = build;
   $('#tx-copy').onclick = () => ctx.copy($('#tx-request').value, 'Copied. Paste it into Claude.');
+  if ($('#tx-to-pics')) $('#tx-to-pics').onclick = () => { tab = 'pictures'; render(); };
   build();
   uploader($('#tx-upload'), 'texts', () => render());
 }
@@ -314,12 +318,16 @@ async function renderPictures(el) {
   const cur = withPrompt.find(s => s.n === pic.n);
   const idx = withPrompt.indexOf(cur);
   el.innerHTML = `<h2>Pictures for “${esc(j.title)}”</h2>
-    <p class="hint">${withPrompt.length} prompts, ${hasImg.size} pictures saved. ${noPrompt.length} parts still have no prompt.</p>
+    <p class="hint">Pictures come in their own file from Claude. The texts file (its name contains “texts”) holds only the story.</p>
+    <p class="hint">${withPrompt.length} picture prompts, ${hasImg.size} pictures saved.</p>
     <div class="step"><h3><span class="num">1</span>Ask Claude for picture prompts</h3>
-      ${noPrompt.length ? `<div class="row"><label>For the next <input id="pc-count" type="number" min="1" max="${noPrompt.length}" value="${Math.min(6, noPrompt.length)}"> parts</label></div>
+      ${noPrompt.length ? `<p><b>${noPrompt.length === 1 ? `Part ${noPrompt[0].n} has` : `Parts ${noPrompt[0].n} to ${noPrompt[noPrompt.length - 1].n} have`} texts but no picture prompt yet.</b></p>
+      <div class="row"><label>Ask for the next <input id="pc-count" type="number" min="1" max="${noPrompt.length}" value="${Math.min(6, noPrompt.length)}"> parts</label></div>
       <textarea class="copybox" readonly id="pc-request"></textarea>
-      <div class="row"><button class="btn primary" id="pc-copy">Copy the request</button><span class="hint">Paste it into your Claude project, then give the answer here:</span></div>
-      <div id="pc-upload"></div>` : '<p>Every prepared part already has a prompt. Bring new texts first.</p><div id="pc-upload"></div>'}
+      <div class="row"><button class="btn primary" id="pc-copy">Copy the request</button><span class="hint">Paste it into your Claude project. Claude answers with a second file, named <b id="pc-file-name"></b>. Give that file here:</span></div>
+      <div id="pc-upload"></div>` : `<div class="note ok">Every part that has texts also has a picture prompt. Nothing to ask for right now.</div>
+      <p class="hint">For more pictures, first add new texts in the <b>Texts</b> tab. They will then appear here.</p>
+      <details><summary>I have a pictures file from Claude anyway</summary><div id="pc-upload"></div></details>`}
     </div>
     <div class="step"><h3><span class="num">2</span>One prompt at a time into ChatGPT</h3>
       ${cur ? `<div class="carousel">
@@ -339,7 +347,7 @@ async function renderPictures(el) {
         <div class="row"><button class="btn primary" id="pc-save" disabled>Save picture for part ${cur.n}</button><span class="hint">Goes to ${esc(storageName())}.</span></div>
       </div></div>` : ''}`;
   if (noPrompt.length) {
-    const build = () => { $('#pc-request').value = pictureRequest(j, noPrompt.slice(0, Math.max(1, +$('#pc-count').value || 1))); };
+    const build = () => { const t = pictureRequest(j, noPrompt.slice(0, Math.max(1, +$('#pc-count').value || 1))); $('#pc-request').value = t; $('#pc-file-name').textContent = (t.match(/named (\S+\.md)/) || [])[1] || ''; };
     $('#pc-count').oninput = build; build();
     $('#pc-copy').onclick = () => ctx.copy($('#pc-request').value, 'Copied. Paste it into Claude.');
   }
