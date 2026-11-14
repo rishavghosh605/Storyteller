@@ -118,6 +118,7 @@ export class StoryRoom {
             const line = lines[i];
             if (!line) { await st.pause(lang === 'de' ? 950 : 750); continue; }
             this.p = { seq: seq.n, part, line: i }; this.lastLine = { ...this.p }; this.save();
+            st.prepare?.(lines.slice(i + 1).find(Boolean), lang);
             const r = await st.say(line, lang, { seq, part, line: i });
             if (r === 'stopped' || !live()) return;
             if (/\[wait\]/i.test(line)) await st.listenWait(6500);

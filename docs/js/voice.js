@@ -81,12 +81,18 @@ let active = null; // finishes the breath that is being spoken right now
 export function stop() {
   token++;
   if (active) { const f = active; active = null; f('stopped'); }
+  if (source) { try { source.onended = null; source.stop(); } catch { /* already ended */ } source = null; }
   if (synth) { try { synth.cancel(); } catch { /* nothing to cancel */ } }
 }
 
 // Speak one breath. Resolves 'end' when finished, 'stopped' if cut off.
 // onWord(i) is called with the index of each displayed word as it starts.
-export function speak(text, { lang = 'en-GB', voiceName = '', rate = 1, pitch = 1, onWord, onStart } = {}) {
+export function speak(text, opts = {}) {
+  const { lang = 'en-GB', voiceName = '', rate = 1, pitch = 1, onWord, onStart } = opts;
+  if (opts.engine === 'kokoro' && lang.startsWith('en')) {
+    if (kokoro.state === 'ready') return kokoroSpeak(text, opts);
+    if (kokoro.state === 'off') kokoroLoad().catch(() => {}); // meanwhile the browser voice speaks
+  }
   const my = ++token;
   const shown = displayWords(text);
   const spoken = sayable(text, lang);
@@ -153,6 +159,13 @@ export function unlock() {
   unlocked = true;
   try { const u = new SpeechSynthesisUtterance(' '); u.volume = 0; synth.speak(u); } catch { /* fine */ }
 }
+function audio() {
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!actx && AC) actx = new AC();
+  if (actx && actx.state === 'suspended') actx.resume().catch(() => {});
+  return actx;
+}
+export function unlockAudio() { try { audio(); } catch { /* no audio */ } }
 
 // Long remarks are spoken sentence by sentence: some browsers cut off long utterances.
 export const sentences = text => text.split(/(?<=[.!?…])\s+/).filter(Boolean);
@@ -160,4 +173,90 @@ export const sentences = text => text.split(/(?<=[.!?…])\s+/).filter(Boolean);
 export function describeVoice(v) {
   if (!v) return 'none';
   return `${v.name} (${v.lang}${v.localService ? ', on this device' : ', online'})`;
+}
+
+// ---------- optional neural English voice: Kokoro ----------
+// Runs fully in this browser (free, no key). The first use downloads about 90 MB,
+// which the browser then keeps. There is no German Kokoro voice.
+export const KOKORO_VOICES = [
+  ['bf_lily', 'Lily (British, gentle and soft)'], ['bf_emma', 'Emma (British, classic)'], ['bf_alice', 'Alice (British)'], ['bf_isabella', 'Isabella (British)'],
+  ['af_heart', 'Heart (American, top rated)'], ['af_bella', 'Bella (American, warm)'], ['af_nicole', 'Nicole (American, quiet)'], ['af_sarah', 'Sarah (American)'], ['af_aoede', 'Aoede (American)'], ['af_kore', 'Kore (American)'],
+];
+export const kokoro = { state: 'off', progress: 0, error: '', onChange: null }; // off | loading | ready | failed
+let tts = null, loading = null, actx = null, source = null, queue = Promise.resolve();
+const clips = new Map();
+const tell = () => { try { kokoro.onChange && kokoro.onChange(kokoro); } catch { /* listener failed */ } };
+
+export function kokoroLoad() {
+  if (loading) return loading;
+  kokoro.state = 'loading'; kokoro.progress = 0; kokoro.error = ''; tell();
+  loading = (async () => {
+    const mod = await import('../vendor/kokoro/kokoro.web.js');
+    tts = await mod.KokoroTTS.from_pretrained('onnx-community/Kokoro-82M-v1.0-ONNX', {
+      dtype: 'q8', device: 'wasm',
+      progress_callback: p => { if (p && p.status === 'progress' && /\.onnx/.test(p.file || '') && p.progress > kokoro.progress) { kokoro.progress = Math.round(p.progress); tell(); } },
+    });
+    kokoro.state = 'ready'; kokoro.progress = 100; tell();
+  })().catch(e => { kokoro.state = 'failed'; kokoro.error = (e && e.message) || String(e); loading = null; tell(); throw e; });
+  return loading;
+}
+
+// Make (or fetch from memory) the sound for one breath. Called ahead of time for the next line, so she does not hesitate.
+export function prepare(text, { kokoroVoice = 'bf_lily', rate = 1 } = {}) {
+  if (kokoro.state !== 'ready') return null;
+  const spoken = sayable(text, 'en');
+  if (!spoken) return null;
+  const key = `${kokoroVoice}|${rate}|${spoken}`;
+  if (!clips.has(key)) {
+    // One at a time: the model cannot make two clips at once.
+    const job = queue.then(() => tts.generate(spoken, { voice: kokoroVoice, speed: Math.max(0.5, Math.min(1.5, rate)) }));
+    queue = job.catch(() => {});
+    clips.set(key, job);
+    job.catch(() => clips.delete(key));
+    if (clips.size > 60) clips.delete(clips.keys().next().value);
+  }
+  return clips.get(key);
+}
+
+function kokoroSpeak(text, opts) {
+  const { onWord, onStart } = opts;
+  const my = ++token;
+  const shown = displayWords(text);
+  const spoken = sayable(text, 'en');
+  return new Promise(resolve => {
+    let finished = false, timers = [];
+    const finish = how => {
+      if (finished) return; finished = true;
+      timers.forEach(clearTimeout);
+      if (active === finish) active = null;
+      if (how === 'end' && my === token) for (let i = 0; i < shown.length; i++) onWord && onWord(i);
+      resolve(my === token ? how : 'stopped');
+    };
+    active = finish;
+    const fallback = () => { if (finished) return; finished = true; if (active === finish) active = null; if (my !== token) return resolve('stopped'); token--; speak(text, { ...opts, engine: 'browser' }).then(resolve); };
+    const job = prepare(text, opts);
+    if (!job) return fallback();
+    job.then(raw => {
+      if (finished) return;
+      if (my !== token) return finish('stopped');
+      const ctx = audio();
+      if (!ctx) return fallback();
+      const buf = ctx.createBuffer(1, raw.audio.length, raw.sampling_rate);
+      buf.getChannelData(0).set(raw.audio);
+      const src = ctx.createBufferSource();
+      src.buffer = buf; src.connect(ctx.destination);
+      source = src;
+      src.onended = () => { if (source === src) source = null; finish('end'); };
+      onStart && onStart({ silent: false, voice: 'Kokoro ' + (opts.kokoroVoice || 'bf_lily') });
+      // Words appear in step with the clip, by their share of its length.
+      const ms = buf.duration * 1000, total = Math.max(1, spoken.length);
+      let pos = 0, last = -1;
+      shown.forEach((w, i) => {
+        const at = (pos / total) * ms * 0.96; pos += sayable(w, 'en').length + 1;
+        timers.push(setTimeout(() => { if (my === token && i > last) { last = i; onWord && onWord(i); } }, at));
+      });
+      timers.push(setTimeout(() => finish('end'), ms + 1500));
+      src.start();
+    }).catch(fallback);
+  });
 }

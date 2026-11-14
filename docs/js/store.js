@@ -37,6 +37,8 @@ export const DEFAULTS = {
   backend: 'browser',          // 'browser' | 'github' | 'folder'
   ghOwner: '', ghRepo: '', ghBranch: 'library', ghToken: '',
   voiceEn: '', voiceDe: '',
+  enEngine: 'browser',         // 'browser' | 'kokoro' (neural voice that runs in the browser)
+  kokoroVoice: 'bf_lily',
   rateEn: 0.9, rateDe: 0.8, pitchEn: 0.9, pitchDe: 1.0,
   slowDe: false,
   cloud: true, meanings: false, mic: false, micLang: 'en-US',

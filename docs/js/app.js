@@ -44,7 +44,7 @@ const S = {
 let cfg = store.settings();
 
 const stage = {
-  say, pause, listenWait, showPicture, hush,
+  say, pause, listenWait, showPicture, hush, prepare,
   glue: () => cfg.glue, waitForMe: () => cfg.waitForMe,
   onPlace: () => { updateControls(); updateTop(); },
   outOfPages: () => setAnswers([['Bring new pages', () => openSheet('texts')]]),
@@ -89,13 +89,16 @@ async function say(text, lang, meta = {}) {
   // A story line is one breath. Her own longer remarks are spoken sentence by sentence.
   const parts = meta.seq ? [text] : voice.sentences(text);
   let r = 'end', offset = 0;
-  for (const part of parts) {
+  for (let k = 0; k < parts.length; k++) {
+    const part = parts[k];
     const base = offset;
+    if (!de && parts[k + 1]) prepare(parts[k + 1], 'en');
     r = await voice.speak(part, {
       lang: de ? 'de-DE' : 'en-GB',
       voiceName: de ? cfg.voiceDe : cfg.voiceEn,
       rate: de ? cfg.rateDe * (cfg.slowDe ? 0.72 : 1) : cfg.rateEn,
       pitch: de ? cfg.pitchDe : cfg.pitchEn,
+      engine: cfg.enEngine, kokoroVoice: cfg.kokoroVoice,
       onWord: i => revealWord(base + i),
       onStart: info => { if (info.silent) silentNote(lang); },
     });
@@ -114,6 +117,11 @@ function silentNote(lang) {
   if (silentTold[lang]) return; silentTold[lang] = true;
   const has = voice.voicesFor(lang).length > 0;
   toast(has ? 'No sound came out. Tap the page once, then check the volume.' : `This device has no ${lang === 'de' ? 'German' : 'English'} voice, so I show the words without sound. See Settings.`, 6000);
+}
+// With the neural voice, the next English line is made while the current one plays.
+function prepare(text, lang) {
+  if (lang !== 'en' || cfg.enEngine !== 'kokoro' || !text) return;
+  try { voice.prepare(text, { kokoroVoice: cfg.kokoroVoice, rate: cfg.rateEn }); } catch { /* she will make it when needed */ }
 }
 function pause(ms) {
   return new Promise(res => {
@@ -461,7 +469,8 @@ async function refresh() {
 async function wake() {
   if (S.awake) return;
   S.awake = true;
-  voice.unlock();
+  voice.unlock(); voice.unlockAudio();
+  if (cfg.enEngine === 'kokoro') voice.kokoroLoad().catch(() => toast('The Lily voice could not be loaded, so the browser voice speaks. See Settings.', 6000));
   body.classList.remove('asleep');
   await voice.whenVoicesReady();
   if (cfg.mic && !ears.on) ears.start(cfg.micLang);
@@ -504,7 +513,7 @@ function wire() {
   };
   $('#cloud-text').onclick = e => { const w = e.target.closest('.w'); if (w && cfg.meanings) { showMeaning(w, S.cloudMeta?.seq?.n); e.stopPropagation(); } };
   document.addEventListener('click', () => { $('#pop').hidden = true; });
-  document.addEventListener('pointerdown', () => voice.unlock(), { once: true });
+  document.addEventListener('pointerdown', () => { voice.unlock(); voice.unlockAudio(); }, { once: true });
   $('#picture').onclick = () => { const lb = $('#lightbox'); lb.querySelector('img').src = $('#picture').src; lb.hidden = false; };
   $('#lightbox').onclick = () => { $('#lightbox').hidden = true; };
 
