@@ -79,7 +79,8 @@ export class StoryRoom {
     const where = mid
       ? `We were in the middle of part ${cur.n}${cur.title?.en ? `, ${cur.title.en}` : ''}.`
       : `We are at part ${cur.n}${cur.title?.en ? `, ${cur.title.en}` : ''}.`;
-    const recap = mid ? (prev?.recap ? `Before that: ${prev.recap}` : '') : (prev?.recap ? `Last time: ${prev.recap}` : '');
+    const short = t => (t.match(/[^.!?]+[.!?]+/g) || [t]).slice(0, 2).join(' ').trim();
+    const recap = !mid && prev?.recap ? `Last time: ${short(prev.recap)}` : '';
     return { kind: 'resume', text: `${hello()} We are in ${j.title}. ${where} ${recap} Shall we go on from there?` };
   }
 

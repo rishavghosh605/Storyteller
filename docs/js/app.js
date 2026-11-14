@@ -58,6 +58,7 @@ function renderCloud(words, lang, meta) {
   cloud.classList.toggle('glue', !!meta.glue);
   $('#cloud-dots').hidden = true;
   $('#cloud-lang').textContent = meta.seq ? (lang === 'de' ? 'Deutsch' : 'English') : '';
+  $('#cloud-text').scrollTop = 0;
   $('#cloud-text').innerHTML = words.map((w, i) => `<span class="w" data-i="${i}" data-lang="${lang}">${esc(w)} </span>`).join('');
   S.cloudMeta = { lang, seq: meta.seq || null };
 }
@@ -73,6 +74,9 @@ function revealWord(i) {
   if (!el) return;
   $('#cloud-text').querySelector('.now')?.classList.remove('now');
   el.classList.add('on', 'now');
+  // Long remarks scroll along inside the cloud, so the word being spoken is always in view.
+  const box = $('#cloud-text');
+  if (el.offsetTop + el.offsetHeight > box.scrollTop + box.clientHeight || el.offsetTop < box.scrollTop) box.scrollTop = Math.max(0, el.offsetTop - el.offsetHeight);
   flap(el.textContent);
 }
 
@@ -532,8 +536,8 @@ function wire() {
   });
 
   // The read-along panel always ends above the control bar.
-  const measure = () => document.documentElement.style.setProperty('--ctl-h', $('#controls').offsetHeight + 'px');
-  measure(); window.addEventListener('resize', measure); new ResizeObserver(measure).observe($('#controls'));
+  const measure = () => { const r = document.documentElement.style; r.setProperty('--ctl-h', $('#controls').offsetHeight + 'px'); r.setProperty('--top-h', $('#top').offsetHeight + 'px'); };
+  measure(); window.addEventListener('resize', measure); const ro = new ResizeObserver(measure); ro.observe($('#controls')); ro.observe($('#top'));
 
   // Her eyes follow you a little.
   const eyes = $('#eyes');
