@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Grandma Storyteller</title>
+<meta name="theme-color" content="#2a1c2c">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%232a1c2c'/%3E%3Ccircle cx='32' cy='36' r='17' fill='%23f1c9a8'/%3E%3Cpath d='M14 34q2-20 18-20t18 20q-6-10-18-10T14 34z' fill='%23eee9f0'/%3E%3Ccircle cx='32' cy='11' r='7' fill='%23eee9f0'/%3E%3Ccircle cx='25' cy='37' r='5.500' fill='none' stroke='%23b8893b' stroke-width='2'/%3E%3Ccircle cx='39' cy='37' r='5.500' fill='none' stroke='%23b8893b' stroke-width='2'/%3E%3Cpath d='M26 46q6 4 12 0' fill='none' stroke='%23a4545a' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body class="room-story asleep">
+
+<div id="scene" aria-hidden="true">
+  <div class="wall"></div>
+  <svg class="window" viewBox="0 0 200 240" preserveAspectRatio="xMidYMid meet">
+    <rect x="6" y="6" width="188" height="228" rx="8" class="win-frame"/>
+    <rect x="18" y="18" width="164" height="204" rx="3" class="win-sky"/>
+    <g class="night">
+      <circle cx="140" cy="62" r="20" class="moon"/>
+      <circle cx="131" cy="56" r="20" class="moon-shade"/>
+      <g class="stars"><circle cx="48" cy="48" r="1.6"/><circle cx="82" cy="92" r="1.2"/><circle cx="60" cy="130" r="1.4"/><circle cx="150" cy="128" r="1.2"/><circle cx="104" cy="40" r="1.1"/><circle cx="38" cy="96" r="1"/><circle cx="162" cy="170" r="1.3"/></g>
+    </g>
+    <g class="day">
+      <circle cx="140" cy="66" r="22" class="sun"/>
+      <path d="M18 190 Q60 150 100 180 T182 168 V222 H18Z" class="hill"/>
+    </g>
+    <path d="M100 18V222M18 120H182" class="win-bars"/>
+    <path d="M18 18 Q50 110 22 222H18Z M182 18 Q150 110 178 222H182Z" class="curtain"/>
+  </svg>
+  <div class="lamp-glow"></div>
+  <div class="floor"></div>
+</div>
+
+<header id="top">
+  <button id="btn-books" class="chip" title="My books (journeys)"><span data-icon="books"></span><span id="top-title">Grandma Storyteller</span></button>
+  <span id="top-place"></span>
+  <span class="spacer"></span>
+  <span id="sync-badge" class="badge" hidden></span>
+  <button id="btn-workshop" class="chip" title="Workshop: bring new pages and pictures"><span data-icon="quill"></span><span class="lbl">Workshop</span></button>
+  <button id="btn-images" class="chip" title="Images"><span data-icon="image"></span><span class="lbl">Images</span></button>
+  <button id="btn-settings" class="chip" title="Settings"><span data-icon="gear"></span></button>
+</header>
+
+<main id="stage">
+  <section id="granny">
+    <div id="cloud" class="cloud" hidden>
+      <div id="cloud-lang" class="cloud-lang"></div>
+      <div id="cloud-text" class="cloud-text" aria-live="off"></div>
+      <div id="cloud-dots" class="cloud-dots" hidden><i></i><i></i><i></i></div>
+    </div>
+    <svg id="grandma" viewBox="0 0 400 440" role="img" aria-label="Grandma in her armchair">
+      <defs>
+        <pattern id="plaid" width="26" height="26" patternUnits="userSpaceOnUse">
+          <rect width="26" height="26" fill="#a5533f"/><path d="M0 7h26M0 20h26" stroke="#7d3a2c" stroke-width="5"/><path d="M7 0v26M20 0v26" stroke="#c98a5b" stroke-width="2" opacity=".7"/>
+        </pattern>
+      </defs>
+      <g class="rock">
+        <!-- armchair -->
+        <path d="M58 440 L64 160 Q66 62 200 62 Q334 62 336 160 L342 440Z" fill="#5b3350"/>
+        <path d="M84 440 L88 170 Q92 90 200 90 Q308 90 312 170 L316 440Z" fill="#6e4162"/>
+        <g fill="#7c4b6f" opacity=".55"><circle cx="150" cy="140" r="4"/><circle cx="250" cy="140" r="4"/><circle cx="200" cy="118" r="4"/><circle cx="118" cy="200" r="4"/><circle cx="282" cy="200" r="4"/></g>
+        <!-- body -->
+        <path d="M104 440 Q100 318 146 280 Q200 256 254 280 Q300 318 296 440Z" fill="#8f6da3"/>
+        <path d="M132 292 Q200 250 268 292 L250 356 Q200 392 150 356Z" fill="#ecd3a8"/>
+        <path d="M150 356 Q200 392 250 356" fill="none" stroke="#d6b582" stroke-width="5" stroke-dasharray="2 7" stroke-linecap="round"/>
+        <path d="M176 266 Q200 290 224 266 L216 250 H184Z" fill="#fbf6ee"/>
+        <rect x="184" y="232" width="32" height="34" rx="12" fill="#eab995"/>
+        <!-- head -->
+        <g id="head">
+          <ellipse cx="200" cy="168" rx="74" ry="66" fill="#efeaf2"/>
+          <circle cx="200" cy="92" r="27" fill="#efeaf2"/>
+          <path d="M184 84 Q200 72 216 84" fill="none" stroke="#d5cddc" stroke-width="3" stroke-linecap="round"/>
+          <circle cx="137" cy="194" r="10" fill="#eab995"/><circle cx="263" cy="194" r="10" fill="#eab995"/>
+          <ellipse cx="200" cy="186" rx="62" ry="68" fill="#f3cfae"/>
+          <path d="M139 182 Q146 116 200 114 Q254 116 261 182 Q244 138 200 137 Q156 138 139 182Z" fill="#efeaf2"/>
+          <circle cx="163" cy="214" r="13" fill="#f0a39a" opacity=".45"/><circle cx="237" cy="214" r="13" fill="#f0a39a" opacity=".45"/>
+          <path d="M160 168 Q175 160 190 167 M210 167 Q225 160 240 168" fill="none" stroke="#c9c0d1" stroke-width="4" stroke-linecap="round"/>
+          <g id="eyes">
+            <g class="eye"><ellipse cx="176" cy="190" rx="5" ry="6.500" fill="#3a2a35"/><circle cx="178" cy="188" r="1.600" fill="#fff"/></g>
+            <g class="eye"><ellipse cx="224" cy="190" rx="5" ry="6.500" fill="#3a2a35"/><circle cx="226" cy="188" r="1.600" fill="#fff"/></g>
+          </g>
+          <path class="lids" d="M168 190 Q176 196 184 190 M216 190 Q224 196 232 190" fill="none" stroke="#3a2a35" stroke-width="3" stroke-linecap="round"/>
+          <path d="M162 200 Q157 204 154 201 M238 200 Q243 204 246 201" fill="none" stroke="#d9a783" stroke-width="2" stroke-linecap="round"/>
+          <g fill="rgba(255,255,255,.14)" stroke="#b8893b" stroke-width="3"><circle cx="176" cy="191" r="20"/><circle cx="224" cy="191" r="20"/></g>
+          <path d="M196 189 Q200 185 204 189 M156 189 L140 184 M244 189 L260 184" fill="none" stroke="#b8893b" stroke-width="3" stroke-linecap="round"/>
+          <path d="M200 198 Q193 214 203 216" fill="none" stroke="#d9a07c" stroke-width="3" stroke-linecap="round"/>
+          <g id="mouth">
+            <path class="m-closed" d="M183 231 Q200 245 217 231" fill="none" stroke="#a4545a" stroke-width="3.500" stroke-linecap="round"/>
+            <ellipse class="m-open1" cx="200" cy="236" rx="10" ry="5" fill="#7a2f3a"/>
+            <ellipse class="m-open2" cx="200" cy="237" rx="11" ry="9" fill="#7a2f3a"/>
+            <path class="m-o" d="M192 236a8 7 0 1 0 16 0a8 7 0 1 0-16 0" fill="#7a2f3a"/>
+          </g>
+        </g>
+        <!-- armrests -->
+        <rect x="44" y="318" width="74" height="130" rx="30" fill="#6e4162"/><rect x="282" y="318" width="74" height="130" rx="30" fill="#6e4162"/>
+        <!-- lap blanket -->
+        <path d="M100 440 Q104 398 200 404 Q296 398 300 440Z" fill="url(#plaid)"/>
+        <!-- story room: open book -->
+        <g class="prop-book">
+          <path d="M126 362 L200 376 L274 362 L276 414 L200 428 L124 414Z" fill="#7b4a2d"/>
+          <path d="M132 358 L200 372 L200 420 L132 406Z" fill="#fbf3e2"/><path d="M268 358 L200 372 L200 420 L268 406Z" fill="#f4e9d2"/>
+          <g stroke="#cbb994" stroke-width="2" stroke-linecap="round"><path d="M142 372l48 9M142 382l48 9M142 392l40 8M258 372l-48 9M258 382l-48 9M258 392l-36 7"/></g>
+          <ellipse cx="128" cy="392" rx="15" ry="12" fill="#f3cfae"/><ellipse cx="272" cy="392" rx="15" ry="12" fill="#f3cfae"/>
+        </g>
+        <!-- tea room: cup, and the closed book put aside -->
+        <g class="prop-tea">
+          <g transform="rotate(-8 318 322)"><rect x="290" y="306" width="58" height="16" rx="3" fill="#7b4a2d"/><rect x="293" y="309" width="52" height="10" fill="#fbf3e2"/><path d="M312 306v16" stroke="#c0392b" stroke-width="3"/></g>
+          <ellipse cx="200" cy="408" rx="46" ry="9" fill="#fbf6ee"/>
+          <path d="M168 366 H232 Q232 404 200 406 Q168 404 168 366Z" fill="#fff"/>
+          <path d="M168 372 H232" stroke="#d98c7a" stroke-width="4"/>
+          <path d="M232 374 Q252 376 248 390 Q244 400 228 396" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round"/>
+          <ellipse cx="200" cy="367" rx="32" ry="5" fill="#b9793f"/>
+          <g class="steam" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".6"><path d="M188 352 q-6 -10 0 -18 q6 -8 0 -16"/><path d="M204 350 q-6 -10 0 -18 q6 -8 0 -18"/><path d="M218 354 q-5 -9 0 -16 q5 -7 0 -14"/></g>
+          <ellipse cx="160" cy="392" rx="15" ry="12" fill="#f3cfae"/><ellipse cx="240" cy="394" rx="13" ry="11" fill="#f3cfae"/>
+        </g>
+        <g class="zzz" fill="#f6e7c8" font-family="Georgia,serif" font-style="italic"><text x="268" y="120" font-size="22">z</text><text x="286" y="98" font-size="28">z</text><text x="308" y="70" font-size="34">z</text></g>
+      </g>
+    </svg>
+    <div id="answers" class="answers"></div>
+  </section>
+
+  <section id="easel">
+    <figure id="paper" class="paper empty">
+      <div id="paper-inner">
+        <img id="picture" alt="" hidden>
+        <div id="no-picture"><span data-icon="pencil"></span><p id="no-picture-text">The picture for this part is not drawn yet.</p></div>
+      </div>
+      <figcaption id="caption"></figcaption>
+    </figure>
+  </section>
+</main>
+
+<footer id="controls">
+  <div class="group story-only">
+    <button id="btn-repeat-seq" class="ctl" title="Repeat this part from the beginning"><span data-icon="restart"></span><small>Part again</small></button>
+    <button id="btn-repeat" class="ctl" title="Repeat the last sentence (left arrow)"><span data-icon="again"></span><small>Sentence</small></button>
+    <button id="btn-play" class="ctl main" title="Tell / pause (space)"><span data-icon="play"></span></button>
+    <button id="btn-next" class="ctl" title="And then? Go on (right arrow)"><span data-icon="next"></span><small>And then?</small></button>
+    <button id="btn-slow" class="ctl toggle" title="Slower German"><span data-icon="turtle"></span><small>Slow German</small></button>
+  </div>
+  <form id="tea-form" class="group tea-only" autocomplete="off">
+    <input id="tea-input" type="text" placeholder="Say it, or write it here for Grandma…" aria-label="Talk to Grandma">
+    <button class="ctl" title="Send"><span data-icon="send"></span></button>
+    <button type="button" id="btn-ask-claude" class="chip" hidden>Copy this question for Claude</button>
+  </form>
+  <div class="group">
+    <button id="btn-room" class="ctl room" title="Switch room"><span data-icon="tea"></span><small id="room-label">Teatime</small></button>
+    <button id="btn-mic" class="ctl toggle" title="Microphone: speak to Grandma (M)"><span data-icon="mic"></span><small>Mic</small></button>
+    <button id="btn-cloud" class="ctl toggle" title="Speech cloud (C)"><span data-icon="cloud"></span><small>Cloud</small></button>
+    <button id="btn-texts" class="ctl toggle" title="Read along (T)"><span data-icon="book"></span><small>Texts</small></button>
+    <button id="btn-meanings" class="ctl toggle" title="Tap a word to see its meaning"><span data-icon="aa"></span><small>Meanings</small></button>
+  </div>
+  <div id="heard" class="heard" hidden></div>
+</footer>
+
+<button id="wake" class="wake">
+  <span class="wake-card"><b>Grandma is dozing.</b><span>Tap anywhere, press space, or just say hello.</span></span>
+</button>
+
+<aside id="texts" class="texts" hidden>
+  <header>
+    <button id="tx-prev" class="ctl small" title="Earlier part"><span data-icon="left"></span></button>
+    <div class="tx-title"><b id="tx-num"></b><span id="tx-name"></span></div>
+    <button id="tx-next" class="ctl small" title="Later part"><span data-icon="right"></span></button>
+    <span class="spacer"></span>
+    <button id="tx-swap" class="chip" title="Swap the two sides"><span data-icon="swap"></span><span class="lbl">Swap</span></button>
+    <button id="tx-close" class="ctl small" title="Hide the texts"><span data-icon="close"></span></button>
+  </header>
+  <div id="tx-body" class="tx-body"></div>
+</aside>
+
+<div id="sheet" class="sheet" hidden>
+  <div class="sheet-card" role="dialog" aria-modal="true">
+    <nav id="tabs" class="tabs">
+      <button data-tab="books">Books</button>
+      <button data-tab="once">Set once</button>
+      <button data-tab="texts">Texts</button>
+      <button data-tab="pictures">Pictures</button>
+      <button data-tab="images">Images</button>
+      <button data-tab="settings">Settings</button>
+      <span class="spacer"></span>
+      <button id="sheet-close" class="ctl small" title="Close"><span data-icon="close"></span></button>
+    </nav>
+    <div id="sheet-body" class="sheet-body"></div>
+  </div>
+</div>
+
+<div id="lightbox" class="lightbox" hidden><img alt=""></div>
+<div id="pop" class="pop" hidden></div>
+<div id="toast" class="toast" hidden></div>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

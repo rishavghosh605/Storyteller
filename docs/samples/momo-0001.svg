@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1350" height="900" viewBox="0 0 900 600" font-family="'Bradley Hand','Segoe Print','Comic Sans MS',cursive" font-size="24" fill="none" stroke="#4a4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <defs>
+    <filter id="rough"><feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="2" seed="7"/><feDisplacementMap in="SourceGraphic" scale="3.500"/></filter>
+    <pattern id="hatch" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(38)"><path d="M0 0V7" stroke="#6b6464" stroke-width="1"/></pattern>
+    <pattern id="hatch2" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(-40)"><path d="M0 0V5" stroke="#7a7272" stroke-width=".9"/></pattern>
+    <marker id="tip" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M1 1L9 5L1 9" fill="none" stroke="#3a3535" stroke-width="1.600"/></marker>
+  </defs>
+  <rect width="900" height="600" fill="#fbf4e4" stroke="none"/>
+  <g filter="url(#rough)">
+    <!-- sun -->
+    <circle cx="770" cy="92" r="38"/><g stroke-width="1.500"><path d="M770 36v-16M770 164v-16M714 92h-16M842 92h-16M730 52l-11-11M810 132l11 11M810 52l11-11M730 132l-11 11"/></g>
+    <!-- far hills -->
+    <path d="M0 250 Q150 190 300 240 T600 225 T900 245" stroke-width="1.300"/>
+    <!-- temple, left -->
+    <path d="M70 250 L190 180 L310 250Z" fill="url(#hatch2)"/><path d="M62 250H318V266H62Z"/>
+    <g><path d="M84 266V380M110 266V380M136 266V380M162 266V380M218 266V380M244 266V380M270 266V380M296 266V380"/></g>
+    <path d="M56 380H324V396H56ZM44 396H336V412H44Z" fill="url(#hatch)"/>
+    <path d="M190 300 q-10 12 -6 30 v50 h12 v-50 q4 -18 -6 -30Z" stroke-width="1.500"/><circle cx="190" cy="292" r="8"/>
+    <!-- palace, right back -->
+    <path d="M560 250V150H600V120H640V150H700V250Z" fill="url(#hatch2)"/><path d="M590 250V200Q620 170 650 200V250"/>
+    <path d="M560 150l-8-22h16zM700 150l-8-22h16zM620 120l-8-26h16z"/>
+    <!-- amphitheatre, centre front -->
+    <ellipse cx="560" cy="430" rx="290" ry="118"/><ellipse cx="560" cy="436" rx="238" ry="92"/><ellipse cx="560" cy="442" rx="186" ry="68"/><ellipse cx="560" cy="448" rx="134" ry="45"/>
+    <ellipse cx="560" cy="454" rx="82" ry="24" fill="url(#hatch)"/>
+    <path d="M270 430V470Q560 600 850 470V430" /><path d="M300 462v26M360 486v28M430 502v30M500 512v30M620 512v30M690 502v30M760 486v28M820 462v26" stroke-width="1.400"/>
+    <g stroke-width="1.200"><path d="M330 400l22 10M390 372l18 14M470 352l10 16M650 352l-10 16M730 372l-18 14M790 400l-22 10M420 420l16 8M700 420l-16 8"/></g>
+    <!-- little people on the seats -->
+    <g stroke-width="1.400"><circle cx="452" cy="392" r="5"/><path d="M452 397v12"/><circle cx="668" cy="392" r="5"/><path d="M668 397v12"/><circle cx="560" cy="372" r="5"/><path d="M560 377v12"/><circle cx="388" cy="424" r="5"/><path d="M388 429v12"/><circle cx="732" cy="424" r="5"/><path d="M732 429v12"/></g>
+    <!-- ground lines -->
+    <path d="M20 440q60 -8 120 0M30 520q80 -10 170 4M150 560q60 -6 120 2" stroke-width="1.200"/>
+  </g>
+  <!-- labels: each sits right beside its own object, with one short arrow that touches it -->
+  <g stroke="#3a3535" stroke-width="1.600">
+    <path d="M664 62 L728 80" marker-end="url(#tip)"/>
+    <path d="M190 148 L190 176" marker-end="url(#tip)"/>
+    <path d="M500 118 L556 140" marker-end="url(#tip)"/>
+    <path d="M560 300 L560 328" marker-end="url(#tip)"/>
+    <path d="M214 500 L290 452" marker-end="url(#tip)"/>
+  </g>
+  <g fill="#2f2a2a" stroke="none">
+    <text x="548" y="62">die Sonne</text>
+    <text x="126" y="140">der Tempel</text>
+    <text x="388" y="112">der Palast</text>
+    <text x="492" y="292">das Theater</text>
+    <text x="70" y="528">die Sitzreihe</text>
+  </g>
+</svg>
