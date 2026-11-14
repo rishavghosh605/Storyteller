@@ -38,8 +38,6 @@ export const DEFAULTS = {
   ghOwner: '', ghRepo: '', ghBranch: 'library', ghToken: '',
   ghTokenExpires: '',          // ISO date, read from GitHub when possible or typed in Settings
   voiceEn: '', voiceDe: '',
-  enEngine: 'browser',         // 'browser' | 'kokoro' (neural voice that runs in the browser)
-  kokoroVoice: 'bf_lily',
   rateEn: 0.9, rateDe: 0.8, pitchEn: 0.9, pitchDe: 1.0,
   slowDe: false,
   cloud: true, meanings: false, mic: false, micLang: 'en-US',
@@ -63,6 +61,21 @@ export function onChange(fn) { listeners.add(fn); return () => listeners.delete(
 function emit(what) { for (const fn of listeners) { try { fn(what); } catch (e) { console.error(e); } } }
 
 // ---------- files ----------
+// A small index of all paths is kept in memory, so that looking for a file never
+// has to load every picture and the whole book from the database again.
+let indexP = null;
+function index() {
+  if (!indexP) indexP = tx('files', 'readonly', s => s.getAll()).then(all => new Map(all.map(r => [r.path, { tag: r.tag, dirty: r.dirty, deleted: r.deleted, mtime: r.mtime }])));
+  return indexP;
+}
+async function writeRec(rec) {
+  await tx('files', 'readwrite', s => s.put(rec));
+  (await index()).set(rec.path, { tag: rec.tag, dirty: rec.dirty, deleted: rec.deleted, mtime: rec.mtime });
+}
+async function dropRec(path) {
+  await tx('files', 'readwrite', s => s.delete(path));
+  (await index()).delete(path);
+}
 export async function getRec(path) { return tx('files', 'readonly', s => s.get(path)); }
 export async function get(path) {
   const r = await getRec(path);
@@ -73,27 +86,27 @@ export async function getJSON(path) {
   if (b == null) return undefined;
   try { return JSON.parse(typeof b === 'string' ? b : await b.text()); } catch { return undefined; }
 }
-export async function put(path, body) {
-  const old = await getRec(path);
-  await tx('files', 'readwrite', s => s.put({ path, body, tag: old?.tag || '', dirty: true, deleted: false, mtime: Date.now() }));
+// lazy: for small frequent saves (my place). They reach GitHub a little later, in one go.
+export async function put(path, body, { lazy = false } = {}) {
+  const old = (await index()).get(path);
+  await writeRec({ path, body, tag: old?.tag || '', dirty: true, deleted: false, mtime: Date.now() });
   emit({ type: 'put', path });
-  scheduleSync();
+  scheduleSync(lazy ? 90000 : 5000, lazy);
 }
-export const putJSON = (path, obj) => put(path, JSON.stringify(obj, null, 1));
+export const putJSON = (path, obj, opts) => put(path, JSON.stringify(obj, null, 1), opts);
 export async function del(path) {
-  const old = await getRec(path);
+  const old = (await index()).get(path);
   if (!old) return;
-  if (old.tag) await tx('files', 'readwrite', s => s.put({ ...old, body: '', dirty: true, deleted: true, mtime: Date.now() }));
-  else await tx('files', 'readwrite', s => s.delete(path));
+  if (old.tag) await writeRec({ path, body: '', tag: old.tag, dirty: true, deleted: true, mtime: Date.now() });
+  else await dropRec(path);
   emit({ type: 'del', path });
   scheduleSync();
 }
 export async function allRecs() { return tx('files', 'readonly', s => s.getAll()); }
 export async function list(prefix = '') {
-  const all = await tx('files', 'readonly', s => s.getAllKeys());
-  const recs = await allRecs();
-  const dead = new Set(recs.filter(r => r.deleted).map(r => r.path));
-  return all.filter(p => p.startsWith(prefix) && !dead.has(p)).sort();
+  const out = [];
+  for (const [path, m] of await index()) if (!m.deleted && path.startsWith(prefix)) out.push(path);
+  return out.sort();
 }
 export async function kvGet(k) { return tx('kv', 'readonly', s => s.get(k)); }
 export async function kvSet(k, v) { return tx('kv', 'readwrite', s => s.put(v, k)); }
@@ -244,10 +257,14 @@ export const syncState = { busy: false, last: 0, error: '', pending: 0 };
 let syncTimer = null;
 let syncAgain = false;
 
-export function scheduleSync(ms = 5000) {
+let syncDue = 0;
+export function scheduleSync(ms = 5000, lazy = false) {
   if (settings().backend === 'browser') return;
+  const due = Date.now() + ms;
+  if (lazy && syncTimer && syncDue <= due) return; // a sync is already on its way
   clearTimeout(syncTimer);
-  syncTimer = setTimeout(() => sync().catch(() => {}), ms);
+  syncDue = due;
+  syncTimer = setTimeout(() => { syncTimer = null; sync().catch(() => {}); }, ms);
 }
 
 async function newerProgress(localBody, remoteBody) {
@@ -266,32 +283,35 @@ export async function sync() {
   let pulled = 0;
   try {
     const remote = await be.list();
-    const recs = (await allRecs()).filter(r => !r.path.startsWith('local/'));
-    const byPath = new Map(recs.map(r => [r.path, r]));
+    const idx = await index();
+    const mine = () => [...idx].filter(([path]) => !path.startsWith('local/'));
 
     // Pull: files that changed on the other side.
     for (const [path, tag] of remote) {
-      const r = byPath.get(path);
-      if (r && r.tag === tag) continue;
-      if (r && r.dirty) {
-        if (!path.endsWith('progress.json') || r.deleted) continue; // my change wins
+      const m = idx.get(path);
+      if (m && m.tag === tag) continue;
+      if (m && m.dirty) {
+        if (!path.endsWith('progress.json') || m.deleted) continue; // my change wins
         const body = await be.read(path, tag);
-        if (await newerProgress(r.body, body) === 'local') continue;
-        await tx('files', 'readwrite', s => s.put({ path, body, tag, dirty: false, deleted: false, mtime: Date.now() }));
+        const local = await getRec(path);
+        if (await newerProgress(local.body, body) === 'local') continue;
+        await writeRec({ path, body, tag, dirty: false, deleted: false, mtime: Date.now() });
         pulled++; continue;
       }
       const body = await be.read(path, tag);
-      await tx('files', 'readwrite', s => s.put({ path, body, tag, dirty: false, deleted: false, mtime: Date.now() }));
+      await writeRec({ path, body, tag, dirty: false, deleted: false, mtime: Date.now() });
       pulled++;
     }
     // Files removed on the other side.
-    for (const r of recs) {
-      if (!remote.has(r.path) && r.tag && !r.dirty) { await tx('files', 'readwrite', s => s.delete(r.path)); pulled++; }
+    for (const [path, m] of mine()) {
+      if (!remote.has(path) && m.tag && !m.dirty) { await dropRec(path); pulled++; }
     }
     // Push: my changes, as one commit.
-    const fresh = (await allRecs()).filter(r => !r.path.startsWith('local/') && r.dirty);
-    const writes = fresh.filter(r => !r.deleted).map(r => ({ path: r.path, body: r.body, mtime: r.mtime }));
-    const deletes = fresh.filter(r => r.deleted && remote.has(r.path)).map(r => r.path);
+    const dirty = mine().filter(([, m]) => m.dirty);
+    const writes = [];
+    for (const [path, m] of dirty) if (!m.deleted) { const r = await getRec(path); if (r) writes.push({ path, body: r.body, mtime: r.mtime }); }
+    const gone = dirty.filter(([, m]) => m.deleted).map(([path]) => path);
+    const deletes = gone.filter(path => remote.has(path));
     if (writes.length || deletes.length) {
       const names = writes.map(w => w.path.split('/').slice(-2).join('/'));
       const msg = names.length === 1 ? `Grandma: ${names[0]}` : `Grandma: ${writes.length} files saved${deletes.length ? `, ${deletes.length} removed` : ''}`;
@@ -300,13 +320,10 @@ export async function sync() {
         const cur = await getRec(w.path);
         if (!cur) continue;
         const unchanged = cur.mtime === w.mtime && !cur.deleted;
-        await tx('files', 'readwrite', s => s.put({ ...cur, tag: tags.get(w.path) || cur.tag, dirty: !unchanged }));
+        await writeRec({ ...cur, tag: tags.get(w.path) || cur.tag, dirty: !unchanged });
       }
     }
-    for (const r of fresh.filter(r => r.deleted)) {
-      const cur = await getRec(r.path);
-      if (cur && cur.deleted) await tx('files', 'readwrite', s => s.delete(r.path));
-    }
+    for (const path of gone) { const m = idx.get(path); if (m && m.deleted) await dropRec(path); }
     syncState.last = Date.now();
   } catch (e) {
     syncState.error = e.message || String(e);
@@ -348,7 +365,7 @@ export async function sequences(id) {
 }
 export const saveSequence = (id, s) => putJSON(jpath(id, `seq/${pad(s.n)}.json`), s);
 export const progress = async id => (await getJSON(jpath(id, 'progress.json'))) || { seq: 0, part: 0, line: 0, updatedAt: 0 };
-export const saveProgress = (id, p) => putJSON(jpath(id, 'progress.json'), { ...p, updatedAt: Date.now() });
+export const saveProgress = (id, p) => putJSON(jpath(id, 'progress.json'), { ...p, updatedAt: Date.now() }, { lazy: true });
 export async function imagePath(id, n) {
   const ps = await list(jpath(id, `img/${pad(n)}.`));
   return ps[0];

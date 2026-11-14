@@ -82,8 +82,6 @@ Layout: `journeys/<book>/journey.json`, `progress.json`, `seq/0001.json`, `img/0
 - **iPhone, iPad, Mac:** download an Enhanced or Premium voice in the system settings (German: Anna or Petra; English: Serena or Kate). The default compact voices sound robotic.
 - **Android:** the Google voices, native German, decent.
 
-**Optional English voice: Kokoro "Lily".** In Settings, English can be switched from a browser voice to the Kokoro neural voice (default `bf_lily`, others selectable). It runs entirely in the browser, free and without a key, downloads about 90 MB the first time, and is slower on phones. If it cannot load, the browser voice speaks instead. German always uses the browser voices, because Kokoro has no German.
-
 Honest limits: none of these is a real old woman's voice. The grandmother feeling comes from how the text is written, the slow pace and the pauses. I could not listen to any voice in my build environment (it has no audio and no voices), so the ranking rests on known reputation, not on my ears. Please audition them in Settings.
 
 ### 2. Switch words and speech recognition

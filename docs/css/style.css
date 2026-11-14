@@ -58,7 +58,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 body.room-tea .day { opacity: 1; } body.room-tea .night { opacity: 0; }
 body.room-tea .win-frame, body.room-tea .win-bars { fill: #8c6a4a; stroke: #8c6a4a; }
 body.room-tea .win-bars { fill: none; }
-.lamp-glow { position: absolute; left: -10%; top: 5%; width: 75vmax; height: 75vmax; border-radius: 50%; background: radial-gradient(circle, var(--glow) 0%, transparent 62%); pointer-events: none; animation: flicker 6s ease-in-out infinite; }
+.lamp-glow { position: absolute; left: -10%; top: 5%; width: 75vmax; height: 75vmax; border-radius: 50%; background: radial-gradient(circle, var(--glow) 0%, transparent 62%); pointer-events: none; }
 @keyframes twinkle { 50% { opacity: .25; } }
 @keyframes flicker { 0%,100% { opacity: 1; } 47% { opacity: .9; } 53% { opacity: .96; } }
 
@@ -78,7 +78,7 @@ body.room-tea .win-bars { fill: none; }
 /* ---------- stage ---------- */
 #stage { position: relative; z-index: 2; display: grid; grid-template-columns: minmax(280px, 42%) 1fr; gap: 2vw; padding: 0 3vw; min-height: 0; align-items: end; }
 #granny { position: relative; align-self: end; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; min-height: 0; }
-#grandma { width: auto; height: min(62vh, 100%); max-width: 100%; display: block; filter: drop-shadow(0 12px 18px rgba(0,0,0,.35)); flex-shrink: 1; min-height: 120px; }
+#grandma { width: auto; height: min(62vh, 100%); max-width: 100%; display: block; flex-shrink: 1; min-height: 120px; }
 .rock { transform-origin: 200px 440px; animation: rock 7s ease-in-out infinite; }
 @keyframes rock { 0%,100% { transform: rotate(-.7deg); } 50% { transform: rotate(.7deg); } }
 #head { transform-origin: 200px 250px; transition: transform .5s ease; }
@@ -148,7 +148,7 @@ body.no-cloud .cloud-dots i { background: var(--amber); }
 @keyframes reveal { 0% { transform: rotate(-6deg) translateY(40px) scale(.8); opacity: 0; } 100% { transform: rotate(1.2deg); opacity: 1; } }
 
 /* ---------- controls ---------- */
-#controls { position: relative; z-index: 6; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px 26px; padding: 10px 14px; padding-bottom: max(10px, env(safe-area-inset-bottom)); --text-on-wall: #f3e7d3; color: var(--text-on-wall); background: rgba(32,21,32,.8); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+#controls { position: relative; z-index: 6; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px 26px; padding: 10px 14px; padding-bottom: max(10px, env(safe-area-inset-bottom)); --text-on-wall: #f3e7d3; color: var(--text-on-wall); background: rgba(32,21,32,.92); }
 .group { display: flex; align-items: center; gap: 8px; }
 .ctl {
   display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-width: 62px; height: 56px; padding: 4px 8px;

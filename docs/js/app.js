@@ -45,7 +45,7 @@ const S = {
 let cfg = store.settings();
 
 const stage = {
-  say, pause, listenWait, showPicture, hush, prepare,
+  say, pause, listenWait, showPicture, hush,
   glue: () => cfg.glue, waitForMe: () => cfg.waitForMe,
   onPlace: () => { updateControls(); updateTop(); },
   outOfPages: () => setAnswers([['Bring new pages', () => openSheet('texts')]]),
@@ -99,13 +99,11 @@ async function say(text, lang, meta = {}) {
   for (let k = 0; k < parts.length; k++) {
     const part = parts[k];
     const base = offset;
-    if (!de && parts[k + 1]) prepare(parts[k + 1], 'en');
     r = await voice.speak(part, {
       lang: de ? 'de-DE' : 'en-GB',
       voiceName: de ? cfg.voiceDe : cfg.voiceEn,
       rate: de ? cfg.rateDe * (cfg.slowDe ? 0.72 : 1) : cfg.rateEn,
       pitch: de ? cfg.pitchDe : cfg.pitchEn,
-      engine: cfg.enEngine, kokoroVoice: cfg.kokoroVoice,
       onWord: i => revealWord(base + i),
       onStart: info => { if (info.silent) silentNote(lang); },
     });
@@ -124,11 +122,6 @@ function silentNote(lang) {
   if (silentTold[lang]) return; silentTold[lang] = true;
   const has = voice.voicesFor(lang).length > 0;
   toast(has ? 'No sound came out. Tap the page once, then check the volume.' : `This device has no ${lang === 'de' ? 'German' : 'English'} voice, so I show the words without sound. See Settings.`, 6000);
-}
-// With the neural voice, the next English line is made while the current one plays.
-function prepare(text, lang) {
-  if (lang !== 'en' || cfg.enEngine !== 'kokoro' || !text) return;
-  try { voice.prepare(text, { kokoroVoice: cfg.kokoroVoice, rate: cfg.rateEn }); } catch { /* she will make it when needed */ }
 }
 function pause(ms) {
   return new Promise(res => {
@@ -231,7 +224,7 @@ function goToSleep() {
 function goPart(n) {
   if (!story.seq(n)) return;
   closeSheet();
-  if (!S.awake) { S.awake = true; body.classList.remove('asleep'); voice.unlock(); voice.unlockAudio(); if (cfg.mic && !ears.on) ears.start(cfg.micLang); }
+  if (!S.awake) { S.awake = true; body.classList.remove('asleep'); voice.unlock(); if (cfg.mic && !ears.on) ears.start(cfg.micLang); }
   if (S.room !== 'story') setRoom('story');
   clearAsk();
   story.goTo(n);
@@ -506,8 +499,7 @@ async function refresh() {
 async function wake() {
   if (S.awake) return;
   S.awake = true;
-  voice.unlock(); voice.unlockAudio();
-  if (cfg.enEngine === 'kokoro') voice.kokoroLoad().catch(() => toast('The Lily voice could not be loaded, so the browser voice speaks. See Settings.', 6000));
+  voice.unlock();
   body.classList.remove('asleep');
   await voice.whenVoicesReady();
   if (cfg.mic && !ears.on) ears.start(cfg.micLang);
@@ -556,7 +548,7 @@ function wire() {
   };
   $('#cloud-text').onclick = e => { const w = e.target.closest('.w'); if (w && cfg.meanings) { showMeaning(w, S.cloudMeta?.seq?.n); e.stopPropagation(); } };
   document.addEventListener('click', () => { $('#pop').hidden = true; });
-  document.addEventListener('pointerdown', () => { voice.unlock(); voice.unlockAudio(); }, { once: true });
+  document.addEventListener('pointerdown', () => voice.unlock(), { once: true });
   $('#picture').onclick = () => { const lb = $('#lightbox'); lb.querySelector('img').src = $('#picture').src; lb.hidden = false; };
   $('#lightbox').onclick = () => { $('#lightbox').hidden = true; };
 
@@ -580,16 +572,23 @@ function wire() {
 
   // Her eyes follow you a little.
   const eyes = $('#eyes');
+  let eyeFrame = 0, eyeAt = null;
   window.addEventListener('pointermove', e => {
-    const r = $('#grandma').getBoundingClientRect();
-    const dx = (e.clientX - (r.left + r.width / 2)) / window.innerWidth, dy = (e.clientY - (r.top + r.height * .42)) / window.innerHeight;
-    eyes.style.transform = `translate(${Math.max(-3, Math.min(3, dx * 8))}px, ${Math.max(-2, Math.min(2.5, dy * 6))}px)`;
+    eyeAt = e;
+    if (eyeFrame) return;
+    eyeFrame = requestAnimationFrame(() => {
+      eyeFrame = 0;
+      const r = $('#grandma').getBoundingClientRect();
+      const dx = (eyeAt.clientX - (r.left + r.width / 2)) / window.innerWidth, dy = (eyeAt.clientY - (r.top + r.height * .42)) / window.innerHeight;
+      eyes.style.transform = `translate(${Math.max(-3, Math.min(3, dx * 8)).toFixed(1)}px, ${Math.max(-2, Math.min(2.5, dy * 6)).toFixed(1)}px)`;
+    });
   }, { passive: true });
 
   store.onChange(ev => {
     if (ev.type === 'sync') { syncBadge(); if (ev.pulled) { if (!story.journey) boot(true); else refresh(); } }
   });
   document.addEventListener('visibilitychange', () => { if (document.hidden) store.sync().catch(() => {}); });
+  window.addEventListener('pagehide', () => { store.sync().catch(() => {}); });
 }
 
 async function boot(again) {

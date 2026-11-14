@@ -125,7 +125,6 @@ export class StoryRoom {
             const line = lines[i];
             if (!line) { await st.pause(lang === 'de' ? 950 : 750); continue; }
             this.p = { seq: seq.n, part, line: i }; this.lastLine = { ...this.p }; this.save();
-            st.prepare?.(lines.slice(i + 1).find(Boolean), lang);
             const r = await st.say(line, lang, { seq, part, line: i });
             if (r === 'stopped' || !live()) return;
             if (/\[wait\]/i.test(line)) await st.listenWait(6500);
@@ -139,6 +138,7 @@ export class StoryRoom {
         const next = this.seqs[this.index(seq.n) + 1];
         this.p = { seq: next ? next.n : seq.n + 1, part: 0, line: 0 };
         this.save();
+        store.scheduleSync(3000);
         if (st.lastOne?.()) {
           // Bedtime: she finishes the part, says good night and dozes off. No question.
           await st.pause(700);
@@ -156,7 +156,8 @@ export class StoryRoom {
     }
   }
 
-  pause() { this.halt(); this.stage.hush(); this.stage.onPlace?.(); }
+  // My place is saved on this device at every line. It is sent on to GitHub at the natural stops.
+  pause() { this.halt(); this.stage.hush(); this.stage.onPlace?.(); store.scheduleSync(3000); }
 
   // Repeat the last sentence, then carry on from there.
   repeatLine() {

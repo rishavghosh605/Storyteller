@@ -488,10 +488,9 @@ async function renderSettings(el) {
     <div class="step"><h3>Grandma's voices</h3>
       <p class="hint">These are the free voices of this browser and device. The star marks the one I would pick. Listen and choose the warmest one.</p>
       <div class="kv">
-        <label>English</label><div class="row"><select id="st-engine"><option value="browser" ${s.enEngine === 'browser' ? 'selected' : ''}>A voice of this browser</option><option value="kokoro" ${s.enEngine === 'kokoro' ? 'selected' : ''}>Kokoro neural voice (downloads about 90 MB once)</option></select></div>
-        <label></label><div class="row"><select id="st-en" ${s.enEngine === 'kokoro' ? 'hidden' : ''}>${opts('en', s.voiceEn)}</select><select id="st-kokoro" ${s.enEngine === 'kokoro' ? '' : 'hidden'}>${voice.KOKORO_VOICES.map(([id, name]) => `<option value="${id}" ${s.kokoroVoice === id ? 'selected' : ''}>${name}</option>`).join('')}</select><button class="btn" data-test="en">Listen</button><span class="hint" id="st-kokoro-msg"></span></div>
+        <label>English</label><div class="row"><select id="st-en">${opts('en', s.voiceEn)}</select><button class="btn" data-test="en">Listen</button></div>
         <label>Speed</label><div class="row"><input id="st-rate-en" type="range" min="0.6" max="1.1" step="0.05" value="${s.rateEn}"><span class="hint">slower is more grandmotherly</span></div>
-        <label>Depth</label><div class="row"><input id="st-pitch-en" type="range" min="0.6" max="1.2" step="0.05" value="${s.pitchEn}"><span class="hint">a little lower sounds older (browser voices only)</span></div>
+        <label>Depth</label><div class="row"><input id="st-pitch-en" type="range" min="0.6" max="1.2" step="0.05" value="${s.pitchEn}"><span class="hint">a little lower sounds older</span></div>
         <label>German</label><div class="row"><select id="st-de">${opts('de', s.voiceDe)}</select><button class="btn" data-test="de">Listen</button></div>
         <label>Speed</label><div class="row"><input id="st-rate-de" type="range" min="0.5" max="1.05" step="0.05" value="${s.rateDe}"><span class="hint">the “Slow German” button slows it further</span></div>
       </div>
@@ -527,10 +526,6 @@ async function renderSettings(el) {
     </div>`;
   const save = patch => { store.saveSettings(patch); ctx.updateControls(); };
   $('#st-en').onchange = e => save({ voiceEn: e.target.value });
-  const kmsg = () => { const el = $('#st-kokoro-msg'); if (!el) return; const k = voice.kokoro; el.textContent = store.settings().enEngine !== 'kokoro' ? '' : k.state === 'loading' ? `Loading the voice… ${k.progress}%` : k.state === 'ready' ? 'Ready.' : k.state === 'failed' ? 'Could not load (' + k.error + '). The browser voice is used instead.' : 'Press Listen to load it.'; };
-  voice.kokoro.onChange = kmsg; kmsg();
-  $('#st-engine').onchange = e => { save({ enEngine: e.target.value }); $('#st-en').hidden = e.target.value === 'kokoro'; $('#st-kokoro').hidden = e.target.value !== 'kokoro'; kmsg(); };
-  $('#st-kokoro').onchange = e => save({ kokoroVoice: e.target.value });
   $('#st-de').onchange = e => save({ voiceDe: e.target.value });
   $('#st-rate-en').oninput = e => save({ rateEn: +e.target.value });
   $('#st-pitch-en').oninput = e => save({ pitchEn: +e.target.value });
@@ -539,9 +534,7 @@ async function renderSettings(el) {
     b.onclick = async () => {
       const de = b.dataset.test === 'de', c = store.settings();
       const text = de ? 'Ach ja, mein Schatz. Komm, setz dich zu mir. Ich erzähle dir eine Geschichte.' : 'Ahh, there you are, my dear. Come, sit with me. Let me tell you a story.';
-      voice.unlockAudio();
-      if (!de && c.enEngine === 'kokoro') { try { await voice.kokoroLoad(); } catch { /* the message is shown next to the button */ } }
-      for (const part of voice.sentences(text)) if (await voice.speak(part, { lang: de ? 'de-DE' : 'en-GB', voiceName: de ? c.voiceDe : c.voiceEn, rate: de ? c.rateDe : c.rateEn, pitch: de ? c.pitchDe : c.pitchEn, engine: c.enEngine, kokoroVoice: c.kokoroVoice, onStart: i => { if (i.silent) ctx.toast('No sound: this device has no voice for this language, or sound is blocked.'); } }) !== 'end') break;
+      for (const part of voice.sentences(text)) if (await voice.speak(part, { lang: de ? 'de-DE' : 'en-GB', voiceName: de ? c.voiceDe : c.voiceEn, rate: de ? c.rateDe : c.rateEn, pitch: de ? c.pitchDe : c.pitchEn, onStart: i => { if (i.silent) ctx.toast('No sound: this device has no voice for this language, or sound is blocked.'); } }) !== 'end') break;
     };
   });
   $('#st-mic').onchange = e => { save({ micLang: e.target.value }); if (ctx.ears.on) { ctx.ears.stop(); ctx.setMic(true); } };
