@@ -1,14 +1,18 @@
 // Quiet room sounds, made in the browser (no sound files): a fire, a clock,
-// a page turning, a teacup, a bird in the morning. One switch in Settings turns them off.
+// a page turning, a teacup, a bird in the morning. A slider in Settings sets how loud, down to off.
 import { settings } from './store.js';
 
 let ctx = null, master = null, fireGain = null, fireTimer = null, clockTimer = null, birdTimer = null, running = '';
-const on = () => !!settings().sounds;
+// How loud the room is: 0 (off) to 1. An older "off" switch still counts as off.
+export const level = () => { const s = settings(); return s.sounds === false ? 0 : Math.max(0, Math.min(1, +s.soundLevel || 0)); };
+const on = () => level() > 0;
+// Called when the slider moves: the room gets louder or quieter at once.
+export function setLevel() { if (master && ctx) master.gain.setTargetAtTime(level() * 1.8, ctx.currentTime, 0.08); }
 
 function audio() {
   const AC = window.AudioContext || window.webkitAudioContext;
   if (!AC) return null;
-  if (!ctx) { ctx = new AC(); master = ctx.createGain(); master.gain.value = 0.9; master.connect(ctx.destination); }
+  if (!ctx) { ctx = new AC(); master = ctx.createGain(); master.gain.value = level() * 1.8; master.connect(ctx.destination); }
   if (ctx.state === 'suspended') ctx.resume().catch(() => {});
   return ctx;
 }

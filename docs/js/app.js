@@ -737,7 +737,7 @@ async function boot(again) {
   }
 }
 
-export const ctx = { ambience, goPart, paintIcons, icon, story, selectJourney, refresh, toast, copy, hush, imageURL, say, setMic, updateControls, ears, understand };
+export const ctx = { sounds, ambience, goPart, paintIcons, icon, story, selectJourney, refresh, toast, copy, hush, imageURL, say, setMic, updateControls, ears, understand };
 wire();
 initPanels(ctx);
 boot();

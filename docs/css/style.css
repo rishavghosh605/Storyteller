@@ -194,8 +194,8 @@ body:not(.asleep) .wake { display: none; }
 .sheet { position: fixed; inset: 0; z-index: 8; background: rgba(20,12,22,.6); display: grid; place-items: center; padding: 2vh 2vw; }
 .sheet-card { background: var(--panel); color: var(--ink); width: min(980px, 100%); height: min(92vh, 900px); border-radius: 18px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,.5); }
 .tabs { display: flex; gap: 2px; padding: 10px 12px 0; border-bottom: 1px solid var(--line); overflow-x: auto; align-items: center; flex-shrink: 0; }
-.tabs button[data-tab] { border: 0; background: none; padding: 10px 14px; border-radius: 10px 10px 0 0; font-size: 15px; color: #7a6468; white-space: nowrap; border-bottom: 3px solid transparent; }
-.tabs button[data-tab].on { color: var(--ink); font-weight: 600; border-bottom-color: var(--accent); }
+.tabs button[data-group] { border: 0; background: none; padding: 10px 14px; border-radius: 10px 10px 0 0; font-size: 15px; color: #7a6468; white-space: nowrap; border-bottom: 3px solid transparent; }
+.tabs button[data-group].on { color: var(--ink); font-weight: 600; border-bottom-color: var(--accent); }
 .sheet-body { flex: 1; overflow: auto; padding: 20px 24px 40px; font-size: 15.500px; line-height: 1.5; }
 .sheet-body h2 { font: 600 22px var(--serif); margin: 0 0 4px; } .sheet-body h3 { font: 600 16px var(--sans); margin: 22px 0 6px; }
 .sheet-body p { margin: 6px 0; } .sheet-body .hint { color: #7a6468; font-size: 14px; }
@@ -357,3 +357,25 @@ body.asleep #head { transition: transform 2.6s ease-in; } #eyes { transition: op
 .album-grid img { width: 100%; aspect-ratio: 3/2; object-fit: cover; display: block; } .album-grid figcaption { font: 14px var(--hand); text-align: center; padding: 4px 0 2px; color: #5e4a52; }
 .album-hint { text-align: center; color: #8a7680; font-size: 13px; margin: 12px 0 0; }
 #btn-jar { color: var(--text-on-wall); }
+
+/* ---------- calmer workshop: groups, sub-tabs, folding sections ---------- */
+.tabs button[data-group] { font-size: 16px; padding: 11px 16px; }
+.subtabs { display: flex; gap: 6px; padding: 10px 14px 0; overflow-x: auto; flex-shrink: 0; }
+.subtabs:empty { display: none; }
+.subtabs button { border: 1px solid var(--line); background: #fff; color: #6b5a61; border-radius: 999px; padding: 6px 13px; font-size: 14px; white-space: nowrap; }
+.subtabs button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.fold { border: 1px solid var(--line); background: #fff; border-radius: 14px; margin: 10px 0; overflow: hidden; }
+.fold > summary { list-style: none; cursor: pointer; display: flex; align-items: baseline; gap: 12px; padding: 14px 16px; color: var(--ink); }
+.fold > summary::-webkit-details-marker { display: none; }
+.fold > summary::after { content: "›"; margin-left: auto; font-size: 20px; color: #a08b78; transition: transform .2s ease; }
+.fold[open] > summary::after { transform: rotate(90deg); }
+.fold > summary b { font: 600 16px var(--sans); white-space: nowrap; }
+.fold > summary span { color: #7a6468; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fold[open] > summary { border-bottom: 1px solid var(--line); }
+.fold-body { padding: 12px 16px 14px; }
+.fold-body > p:first-child { margin-top: 0; }
+.fold details { margin: 10px 0 2px; } .fold details summary { font-size: 14px; }
+.fold details p { font-size: 14px; color: #5f4f57; }
+input[type=range] { accent-color: var(--accent); width: min(240px, 46vw); }
+.kv label { font-size: 14.500px; color: #5f4f57; }
+@media (max-width: 820px) { .fold > summary { flex-wrap: wrap; gap: 2px 12px; } .fold > summary span { white-space: normal; flex-basis: 78%; } }
