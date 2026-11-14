@@ -2,54 +2,54 @@
 journey: momo
 
 === PICTURE 1 ===
-layout: collage
-labels: die Stadt, der Palast, der Tempel, der Markt, das Theater, die Sitzreihe
+layout: panorama
+labels: Stadt, Palast, Tempel, Statue, Markt, Waren, Straße, Gasse, Platz, Leute, Theater, Amphitheater, Sitzreihe, Stufe, Trichter, Himmel
 --- PROMPT ---
-Collage of four. One image divided into four equal panels, 2 by 2. An ancient city in a warm southern country, thousands of years ago, in bright daylight.
+Panorama of several moments. A great ancient city in a warm southern country, thousands of years ago, on a bright busy morning. The city climbs a hill in the background, house above house; label «Stadt» in the sky above the rooftops at the upper left, arrow touching the nearest roofs. On top of the hill stands a wide palace with terraces; label «Palast» beside it on the sky, arrow touching its wall. The sky is blue with a strong sun at the upper right; label «Himmel» on the open sky far right, arrow pointing into the blue.
 
-Panel 1 (top left): A wide view over the ancient city from a hill: flat roofs, a broad paved street, small figures in long robes. Across the empty sky at the top is the handwritten label «die Stadt», joined to the rooftops by one short straight arrow whose tip touches the nearest roof. On the right stands a large palace with a tall staircase and two towers. Directly beside its right tower, on empty sky, is the label «der Palast», joined by one short straight arrow whose tip touches the tower.
+Left side, middle distance: a temple with tall columns on a flight of steps, and between the columns a tall golden statue; label «Tempel» above the temple roof, arrow touching the gable; label «Statue» to the left of the statue, arrow touching its shoulder.
 
-Panel 2 (top right): A temple with six tall columns and a triangular gable, a golden statue visible between the columns. On the empty sky to the left of the gable is the label «der Tempel», joined by one short straight arrow whose tip touches the gable.
+Left foreground: a crowded market under striped cloth awnings. Sellers hold up cloth, a woman weighs fruit, a boy carries a jar, baskets and pots stand everywhere; label «Markt» above the awnings, arrow touching the nearest awning; label «Waren» beside the baskets in the lower left, arrow touching a basket.
 
-Panel 3 (bottom left): A busy market: three stalls with cloth awnings, baskets of fruit, jars, and people trading. On the empty ground in the foreground is the label «der Markt», joined by one short straight arrow whose tip touches the front stall.
+Centre: a broad paved street runs from the foreground up into the city, with people walking in long robes; label «Straße» on the paving, arrow touching the street. A narrow lane climbs between houses to the right of it; label «Gasse» beside its entrance, arrow touching the lane.
 
-Panel 4 (bottom right): A large round stone amphitheatre seen from above and slightly from the side, open to the sky, with many rows of seats rising like steps in a funnel, and tiny spectators. On the empty sky above it is the label «das Theater», joined by one short straight arrow whose tip touches the upper rim of the building. On the empty ground in the lower left corner is the label «die Sitzreihe», joined by one short straight arrow whose tip touches the nearest row of seats.
+Right foreground: an open square where people stand in small groups and talk, some listening with a hand to the ear, one man telling something with wide arms; label «Platz» on the ground at the lower right, arrow touching the paving; label «Leute» beside the nearest group, arrow touching one listener.
 
-LABEL CHECK: «die Stadt» -> the rooftops, panel 1 | «der Palast» -> the palace tower, panel 1 right | «der Tempel» -> the temple gable, panel 2 | «der Markt» -> the front market stall, panel 3 | «das Theater» -> the rim of the amphitheatre, panel 4 | «die Sitzreihe» -> the nearest row of stone seats, panel 4
+Right side, behind the square: a huge round stone theatre open to the sky, seen a little from above, so that we look into it. Its rows of seats rise like steps inside a funnel and are full of tiny spectators; label «Amphitheater» on the sky above it, arrow touching its upper rim; label «Theater» to the right of the building, arrow touching its outer wall; label «Sitzreihe» beside the rows on the right, arrow touching one row; label «Stufe» lower down, arrow touching a step; label «Trichter» at the bottom of the bowl, arrow touching the round floor.
+
+LABEL CHECK: «Stadt» -> the rooftops on the hill, upper left | «Palast» -> the palace on top of the hill | «Himmel» -> the blue sky, far right | «Tempel» -> the temple gable, left | «Statue» -> the golden statue between the columns | «Markt» -> the nearest market awning, left foreground | «Waren» -> a basket of goods, lower left | «Straße» -> the broad paved street, centre | «Gasse» -> the narrow lane right of the street | «Platz» -> the paving of the square, lower right | «Leute» -> a listener in the nearest group | «Amphitheater» -> the upper rim of the round theatre | «Theater» -> its outer wall | «Sitzreihe» -> one row of seats | «Stufe» -> one step | «Trichter» -> the round floor at the bottom
 If an arrow would not touch its own object, move the label closer to the object instead of drawing a longer arrow.
 
 === PICTURE 2 ===
-layout: collage
-labels: der Teppich, die Bühne, die Ruine, die Zikade, die Straßenbahn
+layout: panorama
+labels: Sonne, Teppich, Matte (aus Stroh), Bühne, Zuschauer, Ruine, Mauer, Stein, Zikade, Stadt, Straßenbahn, Auto, Licht
 --- PROMPT ---
-Collage of four. One image divided into four equal panels, 2 by 2. The same ancient amphitheatre, first in its great days, then thousands of years later.
+Panorama of several moments. One wide picture that travels through time from left to right: the same stone theatre in its great days on the left, as a ruin in the middle, and a modern city on the right. Warm light throughout.
 
-Panel 1 (top left): Inside a rich stone amphitheatre under a hot sun. A large patterned carpet is stretched high above the rows of seats as a sunshade, and people in robes sit in its shadow. On the empty sky beside the carpet is the handwritten label «der Teppich», joined by one short straight arrow whose tip touches the edge of the carpet.
+Left third, long ago: inside a rich stone theatre under a burning sun; label «Sonne» in the sky at the upper left, arrow touching the sun. A great carpet woven with gold is stretched above the seats as shade, and people in robes sit under it, leaning forward; label «Teppich» beside the carpet, arrow touching its edge; label «Zuschauer» beside the crowd, arrow touching one listener. On the round stage below, two actors in masks play, one weeping and one laughing; label «Bühne» on the stage floor in front of them, arrow touching the floor. At the far left edge, a smaller plain theatre is shaded with straw mats; label «Matte (aus Stroh)» beside a mat, arrow touching it.
 
-Panel 2 (top right): The round stage at the bottom of the theatre with two actors in masks, one sad and one laughing, and rows of listeners leaning forward. On the empty stone floor in front of the actors is the label «die Bühne», joined by one short straight arrow whose tip touches the floor of the stage.
+Middle third, thousands of years later, almost sepia: the same theatre fallen to ruin. Broken walls, tumbled blocks, weeds and dry grass, nobody there; label «Ruine» in the sky above it, arrow touching the broken top; label «Mauer» beside a cracked wall, arrow touching the wall; label «Stein» beside a fallen block in the foreground, arrow touching the block. On that block, large and close, sits one cicada; label «Zikade» to the right of it, arrow touching the insect.
 
-Panel 3 (bottom left): Thousands of years later. The same theatre as a broken ruin: cracked walls, fallen blocks, weeds. In the left foreground, large and close, one cicada sits on a stone. On the empty sky above the broken wall is the label «die Ruine», joined by one short straight arrow whose tip touches the top of the wall. Directly beside the cicada, on empty paper, is the label «die Zikade», joined by one short straight arrow whose tip touches the cicada.
+Right third, today (about the 1950s), in fuller colour: a lively city street. An old tram rolls along its rails, a rounded car follows, people cross, a street lamp glows, and between the newer houses two ancient columns still stand; label «Stadt» in the sky above the houses, arrow touching a roof; label «Straßenbahn» above the tram, arrow touching its roof; label «Auto» below the car, arrow touching its door; label «Licht» beside the street lamp, arrow touching the lamp.
 
-Panel 4 (bottom right): A modern city street of about the 1950s: an old tram on rails in the centre, a few cars behind it, street lamps, and at the back two ancient columns between newer buildings. On the empty sky above the tram is the label «die Straßenbahn», joined by one short straight arrow whose tip touches the roof of the tram.
-
-LABEL CHECK: «der Teppich» -> the carpet sunshade, panel 1 | «die Bühne» -> the stage floor, panel 2 | «die Ruine» -> the broken wall, panel 3 | «die Zikade» -> the cicada in the foreground, panel 3 | «die Straßenbahn» -> the tram, panel 4
+LABEL CHECK: «Sonne» -> the sun, upper left | «Teppich» -> the golden carpet over the seats | «Zuschauer» -> a listener under the carpet | «Bühne» -> the stage floor with the two actors | «Matte (aus Stroh)» -> a straw mat on the small theatre, far left | «Ruine» -> the broken theatre, middle | «Mauer» -> the cracked wall | «Stein» -> the fallen block in the foreground | «Zikade» -> the cicada on that block | «Stadt» -> a roof of the modern city, right | «Straßenbahn» -> the tram | «Auto» -> the car | «Licht» -> the street lamp
 If an arrow would not touch its own object, move the label closer to the object instead of drawing a longer arrow.
 
 === PICTURE 3 ===
-layout: collage
-labels: die Säule, das Feld, die Hütte, die Pinie, die Ruine, der Tourist, das Gras
+layout: panorama
+labels: Stadt, Säule, Tor, Feld, Hütte, Haus, Wäldchen, Pinie, Ruine, Amphitheater, Sitzreihe, Gras, Tourist, Foto, Professor, Zikade
 --- PROMPT ---
-Collage of four. One image divided into four equal panels, 2 by 2. The southern edge of a large modern city in a warm country, around the 1950s, on a quiet sunny afternoon.
+Panorama of several moments. The southern edge of a large city in a warm country, around the 1950s, on a still, golden afternoon. The picture leads from the city on the left, out past the last poor houses, to a small forgotten ruin on the right.
 
-Panel 1 (top left): Three ancient stone columns stand between plain newer houses. On the empty sky beside the tallest column is the handwritten label «die Säule», joined by one short straight arrow whose tip touches that column.
+Left: the edge of the city with newer houses, and between them three ancient columns and an old stone gate; label «Stadt» in the sky above the houses, arrow touching a roof; label «Säule» beside the tallest column, arrow touching it; label «Tor» above the gate, arrow touching its arch. In front of the gate an elderly professor in a dusty suit walks away with a closed notebook under his arm, not looking back; label «Professor» to his left, arrow touching his shoulder.
 
-Panel 2 (top right): The edge of the city: in the left foreground a poor little hut with a crooked roof, and on the right open ploughed fields reaching to the horizon. On the empty sky above the hut is the label «die Hütte», joined by one short straight arrow whose tip touches the roof of the hut. On the empty sky above the fields, far to the right, is the label «das Feld», joined by one short straight arrow whose tip touches the field.
+Centre: the houses become poorer and smaller. A crooked little hut with washing on a line stands beside a plain low house, a goat is tied by the door, and behind them ploughed fields stretch to the horizon; label «Hütte» above the hut, arrow touching its roof; label «Haus» above the low house, arrow touching its wall; label «Feld» on the far fields, arrow touching a furrow.
 
-Panel 3 (bottom left): A small ruined stone amphitheatre lying half hidden in a little wood of umbrella pines. One large pine stands in the left foreground. On the empty sky beside its crown is the label «die Pinie», joined by one short straight arrow whose tip touches the crown. On the empty ground in front of the ruin, to the right, is the label «die Ruine», joined by one short straight arrow whose tip touches the broken stone seats.
+Right: a little wood of umbrella pines, and half hidden in it a small ruined stone amphitheatre, never grand, its seat rows overgrown; label «Wäldchen» in the sky above the tree tops, arrow touching the crowns; label «Pinie» beside the big pine in the foreground, arrow touching its trunk; label «Ruine» above the broken wall, arrow touching the wall; label «Amphitheater» beside the round of seats, arrow touching the rim; label «Sitzreihe» lower down, arrow touching one row; label «Gras» beside a thick tuft growing on the seats, arrow touching the tuft.
 
-Panel 4 (bottom right): Inside the small ruin: grass grows thick on the stone rows of seats. One tourist, a man in a sun hat with a camera, stands on the right and takes a photo. On the empty sky beside the man is the label «der Tourist», joined by one short straight arrow whose tip touches his hat. On the lower left, beside a large tuft of grass on the seats, is the label «das Gras», joined by one short straight arrow whose tip touches the tuft.
+On the seat rows two tourists climb about: a woman balancing with her arms out, and a man in a sun hat who raises a camera to take a photo; label «Tourist» beside the man, arrow touching his hat; label «Foto» beside the camera, arrow touching the camera. In the right foreground, large and close on a warm stone, sits one cicada; label «Zikade» below it, arrow touching the insect.
 
-LABEL CHECK: «die Säule» -> the tallest column, panel 1 | «die Hütte» -> the hut, panel 2 left | «das Feld» -> the ploughed field, panel 2 right | «die Pinie» -> the big pine, panel 3 left | «die Ruine» -> the ruined seats, panel 3 right | «der Tourist» -> the man with the camera, panel 4 right | «das Gras» -> the tuft of grass, panel 4 left
+LABEL CHECK: «Stadt» -> a city roof, left | «Säule» -> the tallest column | «Tor» -> the arch of the old gate | «Professor» -> the elderly man walking away | «Hütte» -> the crooked hut, centre | «Haus» -> the low house beside it | «Feld» -> the ploughed fields behind | «Wäldchen» -> the pine tops, right | «Pinie» -> the trunk of the big pine | «Ruine» -> the broken wall of the theatre | «Amphitheater» -> the rim of the round of seats | «Sitzreihe» -> one row of seats | «Gras» -> the tuft on the seats | «Tourist» -> the man in the sun hat | «Foto» -> his camera | «Zikade» -> the cicada on the stone, right foreground
 If an arrow would not touch its own object, move the label closer to the object instead of drawing a longer arrow.
 
 === END ===

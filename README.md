@@ -100,7 +100,7 @@ Honest answer on noise: in a quiet room with a headset it should be reliable. In
 
 A free image API is not good enough for this: free models misspell German labels and arrows. ChatGPT's image maker writes text far better. Its free plan allows only a few pictures a day, which fits a weekly rhythm of 5 or 6 if spread over two or three days.
 
-**Pick: ChatGPT, with a prompt recipe that removes the reasons arrows go wrong.** The Claude instruction makes every picture prompt follow these rules: few labels; only large, separate, fully visible things; each label introduced in the same sentence as its object with its position; label on empty paper right beside its object; arrow shorter than the label; no crossing; exact spelling in « »; and a closing "LABEL CHECK" list that maps every label to its object. The ChatGPT instruction repeats the rules and adds a "fix labels" reply for redrawing only the labels.
+**Pick: ChatGPT, with a prompt recipe that removes the reasons arrows go wrong.** The style is a richly detailed ink-and-watercolour storybook scene, full of people doing things, with 12 to 24 German words on small cream tags. The Claude instruction makes every picture prompt name each label together with its object and its position, keep each tag right next to its object, use one short arrow whose tip touches it, and close with a "LABEL CHECK" list that maps every label to its object. The ChatGPT instruction fixes the look of the picture and the tags, and adds a "fix labels" reply for redrawing only the labels. A part that covers several pages becomes one continuous panorama, not a divided collage.
 
 ### 4. How a new book gets prepared
 

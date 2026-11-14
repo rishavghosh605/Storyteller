@@ -31,7 +31,7 @@ test('picture prompts parse', () => {
   const r = parseBatch(pics);
   assert.deepEqual(r.pictures.map(p => p.n), [1, 2, 3]);
   assert.ok(r.pictures[0].prompt.includes('LABEL CHECK'));
-  assert.ok(r.pictures[0].labels.includes('der Tempel'));
+  assert.ok(r.pictures[0].labels.includes("Tempel"));
   assert.deepEqual(r.warnings, []);
 });
 
@@ -106,13 +106,15 @@ test('requests name sequences, pages and borders', () => {
   assert.match(textRequest(j, cut(book, { page: 1, i: 0 }, 'page1', 1), 4, { includeText: true }), /SOURCE TEXT:\nAbsatz 0\. Wort/);
   assert.match(t, /momo-texts-004-005\.md/);
   const p = pictureRequest(j, parseBatch(sample).sequences);
-  assert.match(p, /PICTURE 1 \| pages 6 to 7 \| collage of four/);
+  assert.match(p, /PICTURE 1 \| pages 6 to 7 \| panorama of several moments/);
 });
 
 test('instructions carry the format and the arrow rules', () => {
   assert.match(claudeInstruction(), /=== SEQUENCE <n> ===/);
   assert.match(claudeInstruction(), /LABEL CHECK/);
   assert.match(chatgptInstruction(), /exactly one image/);
+  assert.match(chatgptInstruction(), /watercolour/);
+  assert.match(claudeInstruction(), /12 to 24 labels/);
 });
 
 test('switch words and commands are understood', () => {

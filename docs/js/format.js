@@ -146,7 +146,7 @@ export function pictureRequest(journey, seqs) {
   for (const s of seqs) {
     const pages = s.pages ? (s.pages[0] === s.pages[1] ? `page ${s.pages[0]}` : `pages ${s.pages[0]} to ${s.pages[1]}`) : '';
     const many = s.pages && s.pages[1] > s.pages[0];
-    let l = `PICTURE ${s.n} | ${pages} | ${many ? 'collage of four' : 'single picture'}`;
+    let l = `PICTURE ${s.n} | ${pages} | ${many ? 'panorama of several moments' : 'one scene'}`;
     if (s.title?.en) l += ` | "${s.title.en}"`;
     if (s.nouns?.length) l += ` | nouns: ${s.nouns.map(x => x.de).join(', ')}`;
     L.push(l);
@@ -225,23 +225,32 @@ Name: who this is and what they are doing now
 === END ===
 
 PICTURE PROMPTS ("GRANDMA PICTURES")
-For each "PICTURE n" line you write one prompt that I paste into ChatGPT. ChatGPT already has a standing instruction for the drawing style (a very detailed pencil sketch with small German labels), so do not repeat the style. Describe the picture.
+For each "PICTURE n" line you write one prompt that I paste into ChatGPT. ChatGPT already has a standing instruction for the drawing style and for how labels look, so do not repeat the style. Your job is to describe a picture that is alive.
 
-- "single picture": one scene, the most telling moment of that sequence.
-- "collage of four": one image divided into four panels (2 by 2). Each panel shows one moment of the sequence, in story order: top left, top right, bottom left, bottom right. Describe each panel in its own paragraph that begins "Panel 1 (top left):" and so on.
-- Describe concretely what is visible: place, time of day, light, the people (age, build, hair, clothes, posture, expression), the things, and where each sits in the frame (left, right, centre, foreground, background). ChatGPT has not read the book and remembers nothing between prompts. Describe a returning person or place with the same words every time.
+Bring the scene to life. This matters most:
+- One wide, rich picture of the place where this part of the story happens, full of people who are doing things. Not a diagram and not objects lined up.
+- Give every person an action, a posture and a feeling: who bends down, who points, who laughs, who carries what, who looks at whom. Show the main person of the sequence clearly, a little apart, where the eye lands first.
+- Fill the place with the things the text names, in use and where they belong: the stove being built, the blanket being carried, the goods on the stall.
+- Give the picture depth: something close in the foreground, the main action in the middle, the wider place behind (buildings, hills, sky, weather, time of day, light).
+- "one scene": the most telling moment of the sequence, with everything around it.
+- "panorama of several moments": the sequence covers more than one page, so let its moments happen side by side in one continuous picture of the same place, in story order from left to right. Do not divide the picture into panels. Something remembered, told or far away goes into a small cloud-shaped inset in a top corner.
+- ChatGPT has not read the book and remembers nothing between prompts. Describe a returning person or place with the same words every time (age, build, hair, clothes), and keep that description in your own words.
 - Show only what has happened up to this sequence.
 - Write the prompt in English. The label words are German.
 
-Labels and arrows. Image makers often point arrows at the wrong thing. These rules prevent it, so follow them exactly:
-1. Few labels: 3 to 5 in a single picture, at most 2 per panel in a collage (at most 8 in total). Use nouns from the sequence's NOUNS list, with their article.
-2. Label only things that are large, fully visible and clearly apart from each other. Never label two things that touch or overlap. Never label something tiny or far away.
-3. Introduce every label in the same sentence as its object, as one unit, and say where it is. Example: "In the upper right hangs a full moon. Directly beside it, on empty sky, is the handwritten label «der Mond», joined to the moon by one short straight arrow whose tip touches the moon's edge."
-4. Every label sits on empty background right next to its own object, closer to it than to any other labelled thing. The arrow is shorter than the label is wide.
-5. Arrows never cross each other, never cross another object and never pass through a face.
-6. Write each label in « » with exact spelling, article and umlauts. No other text in the picture: no title, no caption, no signature, no speech bubbles.
-7. End every prompt with a check list in this form, one line per label:
-   LABEL CHECK: «der Mond» -> the full moon, upper right | «die Ruine» -> the stone ruin, centre
+Labels. The picture is also a vocabulary page:
+- Label generously: 12 to 24 labels. Take them from this sequence's German text: mostly nouns for things, people and places that can be seen, and where it fits one or two actions or qualities that are clearly visible (for example «nicken» next to a person who nods, «barfuß» next to bare feet).
+- Write the word the way it appears in the story, without the article, with correct capitals and umlauts. One or two words per label. A short addition in brackets is allowed, such as «Matte (aus Stroh)».
+- The same word may label two things if both are clearly that thing.
+
+Arrows. Image makers often point arrows at the wrong thing. These rules prevent it, so follow them exactly:
+1. Name every label together with its object, in the same sentence, and say where in the picture it is. Example: "A mason kneels at the back wall and builds a small stove of stones; label «Herd» beside the stove, arrow touching the stove; label «Maurer» above his cap, arrow touching his cap."
+2. Label only what is fully visible and large enough to point at. If two labelled things stand close together, say on which side of each its label sits, so the two labels are apart.
+3. Every label sits right next to its own object, closer to it than to anything else that is labelled.
+4. One short arrow per label, and its tip touches the object. Arrows do not cross each other and do not run across a face.
+5. No other writing in the picture: no title, no caption, no signature, no speech bubbles.
+6. End every prompt with a check list, one entry per label, in this form:
+   LABEL CHECK: «Herd» -> the stone stove at the back wall | «Maurer» -> the kneeling man building it | «Rock» -> the girl's patchwork skirt
    Then the sentence: "If an arrow would not touch its own object, move the label closer to the object instead of drawing a longer arrow."
 
 FILE FORMAT FOR "GRANDMA PICTURES"
@@ -250,7 +259,7 @@ FILE FORMAT FOR "GRANDMA PICTURES"
 journey: <journey id from the request>
 
 === PICTURE <n> ===
-layout: <single or collage>
+layout: <scene or panorama>
 labels: <the labels, separated by commas>
 --- PROMPT ---
 <the prompt>
@@ -265,25 +274,30 @@ export function chatgptInstruction() {
 
 I will paste one picture prompt at a time. For each prompt, make exactly one image. Do not ask questions first, do not offer variations, do not write a description. Just make the image.
 
-STYLE, always the same:
-- A very detailed hand-drawn graphite pencil sketch on warm cream paper, like a page from an old illustrated storybook.
-- Pencil only: fine lines, cross-hatching and soft shading. No colour, no ink wash, no photo look, no 3D look.
-- Rich detail in the important things, lighter and looser in the background. Generous empty paper around the main things so that labels have room.
-- Landscape format, 3:2.
+THE PICTURE MUST BE ALIVE. This matters most:
+- A richly detailed, hand-drawn storybook illustration: fine ink and pencil linework, filled with warm watercolour. It should look like a double page from a lovingly illustrated classic children's book, the kind you can look at for a long time and keep finding things.
+- A whole living scene, never a diagram. People are in the middle of doing something: they talk, work, carry, point, laugh, listen. Faces show feeling. Hands and postures tell what is going on.
+- A real place with depth: something close in the foreground, the main action in the middle, the wider place behind it (buildings, hills, trees, sky, weather). Many small true details: textures of stone, wood and cloth, plants, tools, animals, things lying around.
+- Warm natural light and a clear time of day. Colours are warm and earthy with a few bright accents. Quiet, old or remembered scenes may be almost sepia, with colour only on the most important person or thing. Busy, happy scenes are in full colour.
+- The main person of the scene is easy to find and drawn with the most care.
 - Gentle and warm in mood, also in darker scenes. Nothing frightening.
-- People look the way the prompt describes them. Do not copy the look of any existing illustration or film.
+- Landscape format, 3:2. Fill the whole frame. No border, no white margin.
+- People look the way the prompt describes them. Do not copy the look of any existing illustration, film or known character.
 
-LABELS AND ARROWS, always the same:
-- The prompt names a few German labels inside « ». Write exactly these words, letter for letter, with the article and with umlauts (ä, ö, ü, ß). Do not translate them, do not add labels, do not leave one out.
-- Lettering: small, neat, upright pencil handwriting, easy to read, all the same size.
-- Each label sits on empty paper directly next to its own object and belongs to it alone.
-- From each label, draw one short, straight, thin arrow. The arrowhead touches the object the label names. The arrow is shorter than the label is wide.
-- No arrow crosses another arrow, another object or a face. If there is no room, move the label closer to its object. Never draw a long arrow across the picture.
-- The prompt ends with a "LABEL CHECK" list. Before you draw, place each label according to that list. After drawing, each arrowhead must rest on the object named for it in the list.
+SEVERAL MOMENTS:
+- When the prompt says "panorama of several moments", show the moments side by side in one continuous picture of the same place, in order from left to right. Do not divide the picture into panels or frames.
+- Something remembered, told or far away is drawn in a small soft cloud-shaped inset in a top corner.
+
+LABELS, always the same look:
+- The prompt names German labels inside « ». Write exactly these words, letter for letter, with capitals and umlauts (ä, ö, ü, ß). Do not translate them, do not add labels, do not leave one out.
+- Each label is a small cream-coloured paper tag with rounded corners and a soft shadow, with the word in neat, friendly dark-brown handwriting. All tags the same style and about the same size, small enough that the picture stays the hero.
+- Each tag sits right next to its own object, on a calm part of the picture. A tag never covers a face, a hand or the thing it names.
+
+ARROWS, always the same rules:
+- From each tag, one short, thin, dark arrow, straight or gently curved. The arrowhead touches the object the tag names.
+- No arrow crosses another arrow or runs across a face. If there is no room, move the tag closer to its object. Never draw a long arrow across the picture.
+- The prompt ends with a "LABEL CHECK" list. Before you draw, place each tag according to that list. After drawing, every arrowhead must rest on the object named for it in the list.
 - No other writing anywhere: no title, no caption, no signature, no page number, no speech bubbles.
 
-COLLAGE:
-- When the prompt says "collage of four", draw one single image divided into four equal panels, 2 by 2, with thin pencil frame lines between them. Panel order: top left, top right, bottom left, bottom right. The same style in all four. Labels stay inside the panel of their object.
-
-If a result has a wrong spelling or an arrow that points at the wrong thing, and I answer "fix labels", redraw the same picture and change only the labels and arrows.`;
+If a result has a wrong spelling or an arrow that points at the wrong thing, and I answer "fix labels", redraw the same picture and change only the tags and arrows.`;
 }
