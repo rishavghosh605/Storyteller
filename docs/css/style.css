@@ -287,11 +287,12 @@ body.stage-picture #picture { max-height: calc(100dvh - var(--top-h, 58px) - var
 body.stage-picture #grandma { height: min(44vh, 100%); }
 body.stage-picture .cloud { margin-left: 0; margin-right: 0; font-size: clamp(17px, 1.5vw, 21px); padding: 13px 16px 14px; }
 #grandma { transition: height .9s cubic-bezier(.3,.7,.2,1); }
-/* A very slow, very small drift. It stops as soon as the pointer or a finger rests on the picture. */
-@keyframes drift { from { transform: scale(1) translate(0, 0); } to { transform: scale(1.035) translate(-0.6%, -0.4%); } }
-body.drift.stage-picture.speaking #picture { animation: drift 46s ease-in-out infinite alternate; }
-body.drift.stage-picture #picture { animation: drift 46s ease-in-out infinite alternate paused; }
-#paper:hover #picture, #paper:active #picture, #paper:focus-within #picture { animation-play-state: paused !important; }
+/* A slow drift across the picture while it is the stage. It pauses only while you press on the picture. */
+@keyframes drift-a { from { transform: scale(1.01) translate(0.4%, 0.3%); } to { transform: scale(1.085) translate(-2%, -1.300%); } }
+@keyframes drift-b { from { transform: scale(1.085) translate(2%, -1.200%); } to { transform: scale(1.01) translate(-0.4%, 0.4%); } }
+body.drift.stage-picture #picture { animation: drift-a 38s ease-in-out infinite alternate; }
+body.drift.stage-picture #picture.other-way { animation-name: drift-b; }
+#paper:active #picture { animation-play-state: paused !important; }
 /* the page turn between parts */
 .paper.turn-out { animation: turn-out .42s ease-in forwards; transform-origin: left center; }
 .paper.turn-in { animation: turn-in .62s cubic-bezier(.2,.8,.2,1); transform-origin: left center; }

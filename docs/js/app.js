@@ -49,6 +49,7 @@ let cfg = store.settings();
 
 const stage = {
   say, pause, listenWait, showPicture, hush, prepare,
+  prepareAhead: list => { neural.dropWaiting(); list.forEach(([text, lang]) => prepare(text, lang)); },
   glue: () => cfg.glue, waitForMe: () => cfg.waitForMe,
   onPlace: () => { updateControls(); updateTop(); },
   outOfPages: () => setAnswers([['Bring new pages', () => openSheet('texts')]]),
@@ -136,9 +137,9 @@ async function say(text, lang, meta = {}) {
     const n = neural.parse(voiceName);
     r = 'fallback';
     if (n && neural.ENGINES[n.engine].lang === lang) {
-      if (parts[k + 1]) prepare(parts[k + 1], lang); // the next sentence is made while this one plays
+      if (k === 0) parts.slice(1).forEach(x => prepare(x, lang)); // her other sentences are made while the first one plays
       if (neural.state[n.engine].state === 'ready' && !S.waitingDots) { S.waitingDots = setTimeout(() => { if (id === S.sayId) $('#cloud-dots').hidden = false; }, 450); }
-      r = await neural.speak(part, { ...n, rate, onWord: i => revealWord(base + i), onLevel: mouthLevel, onStart: () => { mouthByLevel = true; clearTimeout(S.waitingDots); S.waitingDots = null; $('#cloud-dots').hidden = true; } });
+      r = await neural.speak(part, { ...n, rate, slow: de && cfg.slowDe, onWord: i => revealWord(base + i), onLevel: mouthLevel, onStart: () => { mouthByLevel = true; clearTimeout(S.waitingDots); S.waitingDots = null; $('#cloud-dots').hidden = true; } });
       clearTimeout(S.waitingDots); S.waitingDots = null; mouthByLevel = false;
       if (id === S.sayId) $('#cloud-dots').hidden = true;
     }
@@ -179,6 +180,7 @@ function prepare(text, lang) {
 }
 // Start loading the chosen neural voices, so they are ready by the time she speaks.
 function warmVoices() {
+  cfg = store.settings();
   for (const name of [cfg.voiceEn, cfg.voiceDe]) { const n = neural.parse(name); if (n && neural.state[n.engine].state === 'off') neural.load(n.engine).catch(() => {}); }
 }
 function pause(ms) {
@@ -202,6 +204,7 @@ function nudge() { if (S.waiting) { S.waiting(); return true; } return false; }
 function hush() {
   S.sayId++;
   voice.stop();
+  neural.dropWaiting();
   for (const d of [...S.pauses]) d();
   endWait();
   S.speaking = false; body.classList.remove('speaking');
@@ -252,6 +255,7 @@ async function showPicture(seq, moment) {
     apply();
     if (moment && shown !== key) { paper.classList.remove('reveal'); void paper.offsetWidth; paper.classList.add('reveal'); }
   }
+  img.classList.toggle('other-way', seq.n % 2 === 0);
   shown = key;
   return !!url;
 }
@@ -766,7 +770,7 @@ async function boot(again) {
   }
 }
 
-export const ctx = { neural, warmVoices, sounds, ambience, goPart, paintIcons, icon, story, selectJourney, refresh, toast, copy, hush, imageURL, say, setMic, updateControls, ears, understand };
+export const ctx = { voice, neural, warmVoices, sounds, ambience, goPart, paintIcons, icon, story, selectJourney, refresh, toast, copy, hush, imageURL, say, setMic, updateControls, ears, understand };
 wire();
 initPanels(ctx);
 boot();

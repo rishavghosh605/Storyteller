@@ -40,16 +40,32 @@ async function make({ engine, text, voice, speed, lang }) {
   return { audio: Float32Array.from(wav).subarray(0, Math.max(1, Math.floor(rate * duration[0]))).slice(), rate };
 }
 
-// One job at a time, in the order they arrive.
-let queue = Promise.resolve();
-self.onmessage = e => {
-  const m = e.data;
-  queue = queue.then(async () => {
+// One job at a time, in the order they arrive. Jobs that are still waiting can be dropped
+// (when she is paused or jumps elsewhere), so no time is spent on lines nobody will hear.
+const jobs = [];
+let busy = false;
+async function work() {
+  if (busy) return;
+  busy = true;
+  while (jobs.length) {
+    const m = jobs.shift();
+    if (m.type === 'make') postMessage({ type: 'start', id: m.id }); // from now on this line cannot be moved or dropped
     try {
       if (m.type === 'load') { await load(m.engine); postMessage({ type: 'ready', engine: m.engine }); }
       else if (m.type === 'make') { const { audio, rate } = await make(m); postMessage({ type: 'clip', id: m.id, audio, rate }, [audio.buffer]); }
     } catch (err) {
       postMessage({ type: m.type === 'load' ? 'failed' : 'error', id: m.id, engine: m.engine, message: String((err && err.message) || err) });
     }
-  });
+  }
+  busy = false;
+}
+self.onmessage = e => {
+  const m = e.data;
+  if (m.type === 'drop') {
+    const keep = new Set(m.keep || []);
+    for (let i = jobs.length - 1; i >= 0; i--) if (jobs[i].type === 'make' && !keep.has(jobs[i].id)) { postMessage({ type: 'error', id: jobs[i].id, dropped: true, message: 'dropped' }); jobs.splice(i, 1); }
+    return;
+  }
+  if (m.type === 'make' && m.first) jobs.unshift(m); else jobs.push(m);
+  work();
 };

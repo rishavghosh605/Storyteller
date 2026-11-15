@@ -62,6 +62,30 @@ export class StoryRoom {
     }
   }
 
+  // Her small remarks for a part are chosen once, so they can be prepared ahead like the story lines.
+  glue(seq) {
+    if (!this.glues) this.glues = new Map();
+    if (!this.glues.has(seq.n)) {
+      const second = this.order(seq)[1];
+      this.glues.set(seq.n, { picture: pick(GLUE.picture), second: pick(second === 'en' ? GLUE.toEn : GLUE.toDe), goOn: pick(GLUE.goOn) });
+    }
+    return this.glues.get(seq.n);
+  }
+  // Everything she will say from here on in this part, in order, and the start of the next part.
+  ahead(seq, part, line) {
+    const order = this.order(seq), g = this.glue(seq), out = [];
+    for (let p = part; p < 2; p++) {
+      if (p === 1 && !(part === 1 && line > 0) && this.stage.glue()) out.push([g.second, 'en']);
+      seq[order[p]].forEach((l, i) => { if (l && (p > part || i >= line)) out.push([l, order[p]]); });
+    }
+    const next = this.seqs[this.index(seq.n) + 1];
+    if (next) {
+      out.push([g.goOn, 'en']);
+      const first = this.order(next)[0];
+      next[first].filter(Boolean).slice(0, 6).forEach(l => out.push([l, first]));
+    }
+    return out;
+  }
   seq(n) { return this.seqs.find(s => s.n === n); }
   index(n) { return this.seqs.findIndex(s => s.n === n); }
   get current() { return this.seq(this.p.seq); }
@@ -102,7 +126,7 @@ export class StoryRoom {
     return { kind: 'resume', text: `${hello()} We are in ${j.title}. ${where} ${recap} Shall we go on from there?` };
   }
 
-  halt() { this.runId++; this.playing = false; }
+  halt() { this.runId++; this.playing = false; this.aheadFrom = ''; }
 
   async play() {
     if (!this.journey) return;
@@ -120,7 +144,7 @@ export class StoryRoom {
           this.shownPicture = seq.n;
           const has = await st.showPicture(seq, true);
           if (!live()) return;
-          if (has && st.glue()) { if (await st.say(pick(GLUE.picture), 'en', { glue: true }) === 'stopped') return; }
+          if (has && st.glue()) { if (await st.say(this.glue(seq).picture, 'en', { glue: true }) === 'stopped') return; }
           if (has) await st.pause(2200);
           if (!live()) return;
         } else st.showPicture(seq, false);
@@ -129,7 +153,7 @@ export class StoryRoom {
           const lang = order[part];
           if (part === 1 && !this.p.line && st.glue()) {
             await st.pause(500);
-            if (await st.say(pick(lang === 'en' ? GLUE.toEn : GLUE.toDe), 'en', { glue: true }) === 'stopped') return;
+            if (await st.say(this.glue(seq).second, 'en', { glue: true }) === 'stopped') return;
             await st.pause(400);
           }
           const lines = seq[lang];
@@ -137,10 +161,8 @@ export class StoryRoom {
             const line = lines[i];
             if (!line) { await st.pause(lang === 'de' ? 950 : 750); continue; }
             this.p = { seq: seq.n, part, line: i }; this.lastLine = { ...this.p }; this.save();
-            // The next two lines are prepared now. Near the end of the first telling, so is the start of the second.
-            const coming = lines.slice(i + 1).filter(Boolean).slice(0, 2);
-            coming.forEach(l => st.prepare?.(l, lang));
-            if (part === 0 && coming.length < 2) seq[order[1]].filter(Boolean).slice(0, 2).forEach(l => st.prepare?.(l, order[1]));
+            // All the coming lines of this part, in both languages, are being prepared in the background.
+            if (this.aheadFrom !== `${seq.n}|${part}`) { this.aheadFrom = `${seq.n}|${part}`; st.prepareAhead?.(this.ahead(seq, part, i)); }
             const r = await st.say(line, lang, { seq, part, line: i });
             if (r === 'stopped' || !live()) return;
             if (/\[wait\]/i.test(line)) await st.listenWait(6500);
@@ -170,7 +192,7 @@ export class StoryRoom {
           if (!live()) return;
           if (asked) continue;
         }
-        if (await st.say(pick(GLUE.goOn), 'en', { glue: true, toYou: true }) === 'stopped') return;
+        if (await st.say(this.glue(seq).goOn, 'en', { glue: true, toYou: true }) === 'stopped') return;
         await st.listenWait(st.waitForMe() ? 0 : 4000); // 0 = until I answer
       }
     } finally {

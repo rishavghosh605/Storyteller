@@ -63,8 +63,9 @@ export function ambience(room, time) {
     const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 420;
     fireGain = ctx.createGain(); fireGain.gain.value = 0; fireGain.gain.setTargetAtTime(0.05, ctx.currentTime, 1.2);
     src.connect(f); f.connect(fireGain); fireGain.connect(master); src.start();
-    const crackle = () => { if (!document.hidden) burst({ dur: 0.02 + Math.random() * 0.03, type: 'highpass', freq: 1800 + Math.random() * 2500, gain: 0.012 + Math.random() * 0.02 }); fireTimer = setTimeout(crackle, 180 + Math.random() * 1400); };
-    crackle();
+    // No crackle: short crackles sound like a ticking clock. The fire only swells and settles slowly.
+    const swell = () => { if (fireGain) { fireGain.gain.setTargetAtTime(0.035 + Math.random() * 0.03, ctx.currentTime, 1.6); fireTimer = setTimeout(swell, 2500 + Math.random() * 3500); } };
+    fireTimer = setTimeout(swell, 3000);
   }
   if (time === 'morning') { const bird = () => { if (!document.hidden) chirp(); birdTimer = setTimeout(bird, 7000 + Math.random() * 16000); }; birdTimer = setTimeout(bird, 3000); }
 }

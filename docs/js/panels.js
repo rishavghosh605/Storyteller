@@ -23,7 +23,11 @@ const GROUPS = {
 const lastIn = {};
 
 export const sheetOpen = () => !$('#sheet').hidden;
-export function closeSheet() { $('#sheet').hidden = true; }
+export function closeSheet() {
+  const open = !$('#sheet').hidden;
+  $('#sheet').hidden = true;
+  if (open) voice.stop(); // a voice sample from Settings must not keep talking
+}
 export function openSheet(t, opts) {
   tab = t || tab;
   if (opts?.n) pic.n = opts.n;
@@ -514,7 +518,7 @@ async function renderSettings(el) {
   const neuralNote = chosen => {
     const n = N.parse(chosen); if (!n) return '';
     const st = N.state[n.engine], e = N.ENGINES[n.engine];
-    return st.state === 'ready' ? 'Ready.' : st.state === 'loading' ? `Downloading the voice… ${st.progress}%` : st.state === 'failed' ? 'Could not download the voice. Check the internet connection and press Listen again. Until then a browser voice speaks.' : `Downloads ${e.size} the first time. Press Listen to start.`;
+    return st.state === 'ready' ? 'Ready.' : st.state === 'loading' ? `Downloading the voice… ${st.progress}%` : st.state === 'failed' ? 'Could not download the voice. Check the internet connection and press Listen again. Until then a browser voice speaks.' : `Downloads ${e.size} the first time.`;
   };
   const left = store.tokenDaysLeft();
   const tokenNote = left === null ? 'Optional. Enter the date GitHub showed you, and the app warns you two weeks before.' : left <= 0 ? 'This token has expired. Make a new one on GitHub and paste it above.' : `Expires in ${left} day${left === 1 ? '' : 's'}.` + (left <= 14 ? ' Make a new one on GitHub soon and paste it above.' : '');
@@ -546,7 +550,7 @@ async function renderSettings(el) {
         <label>Room sounds</label><div class="row"><input id="st-level" type="range" min="0" max="1" step="0.05" value="${level}"><span class="hint" id="st-level-word">${loud(level)}</span></div>
       </div>
       <p class="hint">A fire, a page turning, a teacup. All the way left is off.</p>
-      <p><label class="check"><input type="checkbox" id="st-drift" ${s.drift ? 'checked' : ''}> The picture moves very slowly while she tells</label></p>`)}
+      <p><label class="check"><input type="checkbox" id="st-drift" ${s.drift ? 'checked' : ''}> The picture drifts slowly while she tells</label></p>`)}
     ${fold('talk', 'Talking with Grandma', `${s.waitForMe ? 'she waits for me' : 'she goes on by herself'} · I speak ${s.micLang.startsWith('de') ? 'German' : 'English'}`, `
       ${earsSupported ? '' : '<div class="note warn">This browser cannot listen. Use Chrome, Edge or Safari for voice. The buttons do everything too.</div>'}
       <div class="row"><label>I speak to her in <select id="st-mic"><option value="en-US" ${s.micLang === 'en-US' ? 'selected' : ''}>English (US)</option><option value="en-GB" ${s.micLang === 'en-GB' ? 'selected' : ''}>English (UK)</option><option value="en-IN" ${s.micLang === 'en-IN' ? 'selected' : ''}>English (India)</option><option value="de-DE" ${s.micLang === 'de-DE' ? 'selected' : ''}>Deutsch</option></select></label></div>
@@ -586,8 +590,9 @@ async function renderSettings(el) {
   };
   if (offNeural) offNeural();
   offNeural = N.onChange(notes);
-  $('#st-en').onchange = e => { save({ voiceEn: e.target.value }); notes(); };
-  $('#st-de').onchange = e => { save({ voiceDe: e.target.value }); notes(); };
+  // Choosing a neural voice starts its download at once, so it is ready before she next speaks.
+  $('#st-en').onchange = e => { save({ voiceEn: e.target.value }); ctx.warmVoices(); notes(); };
+  $('#st-de').onchange = e => { save({ voiceDe: e.target.value }); ctx.warmVoices(); notes(); };
   $('#st-rate-en').oninput = e => save({ rateEn: +e.target.value });
   $('#st-pitch-en').oninput = e => save({ pitchEn: +e.target.value });
   $('#st-rate-de').oninput = e => save({ rateDe: +e.target.value });
