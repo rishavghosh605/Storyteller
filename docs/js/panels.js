@@ -15,6 +15,7 @@ let pendingBook = null;
 let shownTab = '';
 let openFold = '';
 let offNeural = null;
+let afterClose = null; // something to do once the sheet is closed (for example: greet again after an import)
 const GROUPS = {
   journey: [['contents', 'Contents'], ['books', 'My books']],
   workshop: [['texts', 'New pages'], ['pictures', 'Make pictures'], ['images', 'Saved pictures'], ['once', 'Set once']],
@@ -27,6 +28,7 @@ export function closeSheet() {
   const open = !$('#sheet').hidden;
   $('#sheet').hidden = true;
   if (open) voice.stop(); // a voice sample from Settings must not keep talking
+  if (open && afterClose) { const f = afterClose; afterClose = null; f(); }
 }
 export function openSheet(t, opts) {
   tab = t || tab;
@@ -220,6 +222,11 @@ async function renderBooks(el) {
       <div class="row"><label class="btn"><input id="bk-file" type="file" accept=".pdf,.txt,application/pdf,text/plain" hidden>Choose a PDF or text file</label><span id="bk-status" class="hint"></span></div>
       <div id="bk-form" hidden><div class="row"><label>Title <input id="bk-title" type="text" size="28"></label><label>Author <input id="bk-author" type="text" size="20"></label><button id="bk-add" class="btn primary">Start this journey</button></div></div>
     </div>
+    ${store.settings().backend === 'browser' ? `<div class="step"><h3>I already have my journeys</h3>
+      <p class="hint">On a new phone or computer: paste the GitHub token of your library here. Your books, your place and your pictures are fetched, and this device stays in step from then on. The token stays on this device.</p>
+      <div class="row"><input id="im-token" type="password" placeholder="github_pat_…" autocomplete="off" size="30"><button id="im-go" class="btn primary">Fetch my journeys</button></div>
+      <p id="im-msg" class="hint"></p>
+    </div>` : ''}
     <div class="step"><h3>Try it first</h3><p class="hint">Three short parts from the opening of Momo, retold by Grandma, with picture prompts and one example picture. Add your own Momo file afterwards to prepare more pages.</p><button id="bk-sample" class="btn">Load the Momo sample</button></div>`;
 
   el.querySelectorAll('[data-spine]').forEach(b => { b.onclick = async () => { await ctx.selectJourney(b.dataset.spine); render(); }; });
@@ -269,6 +276,23 @@ async function renderBooks(el) {
     await ctx.selectJourney(id);
     ctx.toast(old ? 'The book is attached to your journey.' : 'A new journey. Now bring Grandma the first pages.');
     tab = old ? 'books' : 'once'; render();
+  };
+  if ($('#im-go')) $('#im-go').onclick = async () => {
+    const token = $('#im-token').value.trim(), msg = $('#im-msg');
+    if (!token) { msg.textContent = 'Paste your token first.'; return; }
+    $('#im-go').disabled = true; msg.textContent = 'Looking for your library…';
+    try {
+      const lib = await store.findLibrary(token);
+      store.saveSettings({ backend: 'github', ghOwner: lib.owner, ghRepo: lib.repo, ghBranch: lib.branch, ghToken: token });
+      msg.textContent = `Found ${lib.journeys} ${lib.journeys === 1 ? 'journey' : 'journeys'} in ${lib.repo}. Fetching…`;
+      await store.sync();
+      const js = await store.journeys();
+      await ctx.selectJourney(js.find(j => j.id === store.settings().current)?.id || js[0]?.id || '');
+      ctx.updateControls();
+      afterClose = () => ctx.greet(); // she now knows where you are, and says so
+      ctx.toast('Your journeys are here. Close this and say hello to Grandma.', 5000);
+      render();
+    } catch (e) { msg.textContent = e.message; $('#im-go').disabled = false; }
   };
   $('#bk-sample').onclick = async () => {
     try {

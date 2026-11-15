@@ -337,6 +337,24 @@ export async function sync() {
   return pulled;
 }
 
+// With only a token: look through the repositories it can reach, most recently used first,
+// and return the one that holds a Grandma library (a branch with journeys in it).
+export async function findLibrary(token, branch = 'library') {
+  const headers = { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' };
+  const r = await fetch('https://api.github.com/user/repos?per_page=100&sort=pushed', { headers, cache: 'no-store' });
+  if (r.status === 401) throw new Error('GitHub does not accept this token. Check that you copied all of it, and that it has not expired.');
+  if (!r.ok) throw new Error(`GitHub answered ${r.status}.`);
+  const repos = await r.json();
+  for (const repo of repos.slice(0, 30)) {
+    const t = await fetch(`https://api.github.com/repos/${repo.full_name}/git/trees/${branch}?recursive=1`, { headers, cache: 'no-store' });
+    if (!t.ok) continue;
+    const tree = (await t.json()).tree || [];
+    const journeys = tree.filter(e => /^journeys\/[^/]+\/journey\.json$/.test(e.path)).length;
+    if (journeys) return { owner: repo.owner.login, repo: repo.name, branch, journeys };
+  }
+  throw new Error('No library was found with this token. It must be the token of the repository where your journeys are saved.');
+}
+
 export async function testGithub() {
   const s = settings();
   const r = await fetch(`https://api.github.com/repos/${s.ghOwner}/${s.ghRepo}`, { headers: { Authorization: `Bearer ${s.ghToken}`, Accept: 'application/vnd.github+json' } });

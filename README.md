@@ -57,6 +57,10 @@ Grandma breathes, blinks at uneven moments, looks at the picture, at her book an
 
 **Contents** (the "Part 3 of 18" chip at the top) lists every part under the book's chapters, with its picture and a short description once it has been told. Tap a part to hear it. **Last one** makes the current part the last for tonight: Grandma finishes it, says good night and dozes off.
 
+The bar at the bottom shows the six things you use most: Sentence, Play, And then?, Teatime, Texts and **More**. More opens a small tray with Mic, Cloud, Meanings, Slow German, Part again and Last one; a dot on it shows when one of them is switched on.
+
+**On a new device:** under My journey, My books, paste the GitHub token of your library into "I already have my journeys". The app finds the library by itself and fetches your books, your place and your pictures.
+
 ## Where things are saved
 
 Choose in **Settings**:

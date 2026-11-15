@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="build" content="2f88dff342">
+<meta name="build" content="ea012b31db">
 <title>Grandma Storyteller</title>
 <meta name="theme-color" content="#2a1c2c">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%232a1c2c'/%3E%3Ccircle cx='32' cy='36' r='17' fill='%23f1c9a8'/%3E%3Cpath d='M14 34q2-20 18-20t18 20q-6-10-18-10T14 34z' fill='%23eee9f0'/%3E%3Ccircle cx='32' cy='11' r='7' fill='%23eee9f0'/%3E%3Ccircle cx='25' cy='37' r='5.500' fill='none' stroke='%23b8893b' stroke-width='2'/%3E%3Ccircle cx='39' cy='37' r='5.500' fill='none' stroke='%23b8893b' stroke-width='2'/%3E%3Cpath d='M26 46q6 4 12 0' fill='none' stroke='%23a4545a' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E">
-<link rel="stylesheet" href="css/style.css?v=1d16fb1356">
+<link rel="stylesheet" href="css/style.css?v=18044a8e2a">
 </head>
 <body class="room-story asleep">
 
@@ -193,12 +193,9 @@
 
 <footer id="controls">
   <div class="group story-only">
-    <button id="btn-repeat-seq" class="ctl" title="Repeat this part from the beginning"><span data-icon="restart"></span><small>Part again</small></button>
     <button id="btn-repeat" class="ctl" title="Repeat the last sentence (left arrow)"><span data-icon="again"></span><small>Sentence</small></button>
     <button id="btn-play" class="ctl main" title="Tell / pause (space)"><span data-icon="play"></span></button>
     <button id="btn-next" class="ctl" title="And then? Go on (right arrow)"><span data-icon="next"></span><small>And then?</small></button>
-    <button id="btn-slow" class="ctl toggle" title="Slower German"><span data-icon="turtle"></span><small>Slow German</small></button>
-    <button id="btn-night" class="ctl toggle" title="Bedtime: this part is the last one for tonight"><span data-icon="moon"></span><small>Last one</small></button>
   </div>
   <form id="tea-form" class="group tea-only" autocomplete="off">
     <input id="tea-input" type="text" placeholder="Say it, or write it here for Grandma…" aria-label="Talk to Grandma">
@@ -208,10 +205,16 @@
   </form>
   <div class="group">
     <button id="btn-room" class="ctl room" title="Switch room"><span data-icon="tea"></span><small id="room-label">Teatime</small></button>
+    <button id="btn-texts" class="ctl toggle" title="Read along (T)"><span data-icon="book"></span><small>Texts</small></button>
+    <button id="btn-more" class="ctl" title="More: mic, cloud, meanings, slow German, part again, last one" aria-expanded="false"><span data-icon="more"></span><small>More</small><i id="more-dot" class="dot" hidden></i></button>
+  </div>
+  <div id="more-tray" class="tray" hidden>
     <button id="btn-mic" class="ctl toggle" title="Microphone: speak to Grandma (M)"><span data-icon="mic"></span><small>Mic</small></button>
     <button id="btn-cloud" class="ctl toggle" title="Speech cloud (C)"><span data-icon="cloud"></span><small>Cloud</small></button>
-    <button id="btn-texts" class="ctl toggle" title="Read along (T)"><span data-icon="book"></span><small>Texts</small></button>
     <button id="btn-meanings" class="ctl toggle" title="Tap a word to see its meaning"><span data-icon="aa"></span><small>Meanings</small></button>
+    <button id="btn-slow" class="ctl toggle story-only" title="Slower German"><span data-icon="turtle"></span><small>Slow German</small></button>
+    <button id="btn-repeat-seq" class="ctl story-only" title="Repeat this part from the beginning"><span data-icon="restart"></span><small>Part again</small></button>
+    <button id="btn-night" class="ctl toggle story-only" title="Bedtime: this part is the last one for tonight"><span data-icon="moon"></span><small>Last one</small></button>
   </div>
   <div id="heard" class="heard" hidden></div>
 </footer>
@@ -251,7 +254,7 @@
 <div id="pop" class="pop" hidden></div>
 <div id="toast" class="toast" hidden></div>
 
-<script type="importmap">{"imports":{"./js/alive.js":"./js/alive.js?v=1371ff1d55","./js/app.js":"./js/app.js?v=d24aaabb27","./js/book.js":"./js/book.js?v=8ad99101aa","./js/ears.js":"./js/ears.js?v=2a42d3dac9","./js/format.js":"./js/format.js?v=fab0599fe6","./js/neural-worker.js":"./js/neural-worker.js?v=883df475bf","./js/neural.js":"./js/neural.js?v=5558f725f9","./js/panels.js":"./js/panels.js?v=dca3dddd36","./js/sounds.js":"./js/sounds.js?v=dccf6820bb","./js/store.js":"./js/store.js?v=cbfe6a4033","./js/story.js":"./js/story.js?v=84cc6d758e","./js/tea.js":"./js/tea.js?v=6d4078525f","./js/voice.js":"./js/voice.js?v=1a7dec9fd3","./js/words.js":"./js/words.js?v=1825eaa407"}}</script>
-<script type="module" src="./js/app.js?v=d24aaabb27"></script>
+<script type="importmap">{"imports":{"./js/alive.js":"./js/alive.js?v=1371ff1d55","./js/app.js":"./js/app.js?v=0226421dde","./js/book.js":"./js/book.js?v=8ad99101aa","./js/ears.js":"./js/ears.js?v=2a42d3dac9","./js/format.js":"./js/format.js?v=fab0599fe6","./js/neural-worker.js":"./js/neural-worker.js?v=883df475bf","./js/neural.js":"./js/neural.js?v=5558f725f9","./js/panels.js":"./js/panels.js?v=a43d834e10","./js/sounds.js":"./js/sounds.js?v=dccf6820bb","./js/store.js":"./js/store.js?v=f5661c8759","./js/story.js":"./js/story.js?v=84cc6d758e","./js/tea.js":"./js/tea.js?v=6d4078525f","./js/voice.js":"./js/voice.js?v=1a7dec9fd3","./js/words.js":"./js/words.js?v=1825eaa407"}}</script>
+<script type="module" src="./js/app.js?v=0226421dde"></script>
 </body>
 </html>

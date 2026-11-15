@@ -34,6 +34,7 @@ const ICONS = {
   gear: '<circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.600 5.600l2.100 2.100M16.300 16.300l2.100 2.100M5.600 18.400l2.100-2.100M16.300 7.700l2.100-2.100"/>',
   left: '<path d="M15 5l-7 7 7 7"/>', right: '<path d="M9 5l7 7-7 7"/>', close: '<path d="M6 6l12 12M18 6L6 18"/>',
   swap: '<path d="M4 8h14l-3-3M20 16H6l3 3"/>', send: '<path d="M4 12l16-8-6 16-3-6z"/>',
+  more: '<circle cx="6" cy="12" r="1.600" fill="currentColor"/><circle cx="12" cy="12" r="1.600" fill="currentColor"/><circle cx="18" cy="12" r="1.600" fill="currentColor"/>',
   moon: '<path d="M20 14.500A8 8 0 1 1 9.500 4a6.500 6.500 0 0 0 10.500 10.500z"/>',
   pencil: '<path d="M4 20l1-5L16 4l4 4L9 19zM14 6l4 4"/>',
 };
@@ -286,7 +287,7 @@ async function greet() {
     story.journey.startLang = lang; await store.saveJourney(story.journey);
     begin();
   };
-  if (g.kind === 'nobook') { setAnswers([['Choose a book', () => openSheet('books')]]); return; }
+  if (g.kind === 'nobook') { setAnswers([['Choose a book', () => openSheet('books')], ['I already have my journeys', () => openSheet('books'), true]]); return; }
   if (g.kind === 'nopages' || g.kind === 'nomore') { setAnswers([['Bring new pages', () => openSheet('texts')], ['A little tea instead', enterTea, true]]); return; }
   if (g.kind === 'fresh' && !story.journey.startLang) {
     ask({ german: start('de'), english: start('en') }, [['Deutsch zuerst', start('de')], ['English first', start('en')]]);
@@ -618,6 +619,8 @@ function updateControls() {
   $('#btn-mic').classList.toggle('on', cfg.mic && ears.on);
   $('#btn-mic').classList.toggle('live', !!ears.live);
   $('#btn-texts').classList.toggle('on', !$('#texts').hidden);
+  // A dot on "More" when something inside it is switched away from its usual state.
+  $('#more-dot').hidden = !((cfg.mic && ears.on) || cfg.meanings || cfg.slowDe || S.lastOne || !cfg.cloud);
   body.classList.toggle('no-cloud', !cfg.cloud);
   body.classList.toggle('drift', !!cfg.drift);
   body.classList.toggle('meanings', cfg.meanings);
@@ -701,6 +704,16 @@ function wire() {
   setInterval(syncBadge, 30000);
   $('#top-place').onclick = () => openSheet('contents');
   $('#btn-night').onclick = () => act('bedtime');
+  // The tray stays open while you switch things in it, and closes when you tap anywhere else.
+  const tray = on => { $('#more-tray').hidden = !on; $('#btn-more').setAttribute('aria-expanded', String(on)); };
+  $('#btn-more').onclick = e => { e.stopPropagation(); tray($('#more-tray').hidden); };
+  $('#more-tray').onclick = e => { e.stopPropagation(); if (e.target.closest('#btn-repeat-seq')) tray(false); };
+  // A tap outside the open tray only closes it. It does not also press whatever was underneath.
+  document.addEventListener('click', e => {
+    if ($('#more-tray').hidden || e.target.closest('#more-tray, #btn-more')) return;
+    tray(false);
+    if (!e.target.closest('#controls')) { e.stopPropagation(); e.preventDefault(); }
+  }, true);
   const toPicture = () => (story.current ? openSheet('pictures', { n: story.current.n }) : openSheet(story.journey ? 'texts' : 'books'));
   $('#no-picture').onclick = toPicture;
   $('#no-picture').onkeydown = e => { if (e.key === 'Enter') toPicture(); };
@@ -729,7 +742,7 @@ function wire() {
 
   document.addEventListener('keydown', e => {
     if (e.target.matches('input, textarea, select')) return;
-    if (e.key === 'Escape') { if (!$('#lightbox').hidden) $('#lightbox').hidden = true; else if (sheetOpen()) closeSheet(); else if (!$('#texts').hidden) closeTexts(); return; }
+    if (e.key === 'Escape') { if (!$('#more-tray').hidden) { $('#more-tray').hidden = true; $('#btn-more').setAttribute('aria-expanded', 'false'); } else if (!$('#lightbox').hidden) $('#lightbox').hidden = true; else if (sheetOpen()) closeSheet(); else if (!$('#texts').hidden) closeTexts(); return; }
     if (sheetOpen() || e.metaKey || e.ctrlKey || e.altKey) return;
     if (!S.awake) { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); wake(); } return; }
     const k = e.key.toLowerCase();
@@ -770,7 +783,7 @@ async function boot(again) {
   }
 }
 
-export const ctx = { voice, neural, warmVoices, sounds, ambience, goPart, paintIcons, icon, story, selectJourney, refresh, toast, copy, hush, imageURL, say, setMic, updateControls, ears, understand };
+export const ctx = { greet: () => { if (S.awake) { hush(); greet(); } }, voice, neural, warmVoices, sounds, ambience, goPart, paintIcons, icon, story, selectJourney, refresh, toast, copy, hush, imageURL, say, setMic, updateControls, ears, understand };
 wire();
 initPanels(ctx);
 boot();
