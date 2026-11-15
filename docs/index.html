@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="build" content="0e422aeb43">
+<meta name="build" content="5494be4572">
 <title>Grandma Storyteller</title>
 <meta name="theme-color" content="#2a1c2c">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%232a1c2c'/%3E%3Ccircle cx='32' cy='36' r='17' fill='%23f1c9a8'/%3E%3Cpath d='M14 34q2-20 18-20t18 20q-6-10-18-10T14 34z' fill='%23eee9f0'/%3E%3Ccircle cx='32' cy='11' r='7' fill='%23eee9f0'/%3E%3Ccircle cx='25' cy='37' r='5.500' fill='none' stroke='%23b8893b' stroke-width='2'/%3E%3Ccircle cx='39' cy='37' r='5.500' fill='none' stroke='%23b8893b' stroke-width='2'/%3E%3Cpath d='M26 46q6 4 12 0' fill='none' stroke='%23a4545a' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E">
-<link rel="stylesheet" href="css/style.css?v=e467c81dad">
+<link rel="stylesheet" href="css/style.css?v=5c26043e6e">
 </head>
 <body class="room-story asleep">
 
@@ -35,12 +35,17 @@
     </g>
     <path d="M18 196 Q60 166 100 188 T182 178 V222 H18Z" class="hill"/>
     <path d="M100 18V222M18 120H182" class="win-bars"/>
-    <path d="M18 18 Q50 110 22 222H18Z M182 18 Q150 110 178 222H182Z" class="curtain"/>
+    <path d="M18 18 Q50 110 22 222H18Z" class="curtain sway-l"/><path d="M182 18 Q150 110 178 222H182Z" class="curtain sway-r"/>
+    <rect x="2" y="226" width="196" height="12" rx="3" class="win-sill"/>
     <g class="candle"><rect x="92" y="196" width="10" height="24" rx="2" fill="#f4ead2"/><path class="flame" d="M97 180q7 9 0 16q-7-7 0-16z" fill="#ffd27a"/></g>
   </svg>
+  <div class="wainscot"></div>
   <div class="lamp-glow"></div>
   <div class="sunbeam"></div>
-  <div class="floor"></div>
+  <div class="floor"><div class="rug"></div></div>
+  <div class="firelight"></div>
+  <div class="motes"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+  <div class="vignette"></div>
 </div>
 
 <header id="top">
@@ -65,61 +70,84 @@
         <pattern id="plaid" width="26" height="26" patternUnits="userSpaceOnUse">
           <rect width="26" height="26" fill="#a5533f"/><path d="M0 7h26M0 20h26" stroke="#7d3a2c" stroke-width="5"/><path d="M7 0v26M20 0v26" stroke="#c98a5b" stroke-width="2" opacity=".7"/>
         </pattern>
+        <radialGradient id="shade"><stop offset="0" stop-color="#000" stop-opacity=".34"/><stop offset=".7" stop-color="#000" stop-opacity=".12"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient>
+        <linearGradient id="chair-light" x1="0" x2="1"><stop offset="0" stop-color="#ffb866" stop-opacity=".2"/><stop offset=".5" stop-color="#ffb866" stop-opacity="0"/></linearGradient>
+        <radialGradient id="face-shade" cx=".42" cy=".4" r=".7"><stop offset=".55" stop-color="#f3cfae"/><stop offset="1" stop-color="#e6b995"/></radialGradient>
       </defs>
+      <!-- her shadow on the wall, thrown by the fire on the left -->
+      <ellipse class="wall-shadow" cx="236" cy="262" rx="214" ry="236" fill="url(#shade)"/>
+      <ellipse cx="200" cy="437" rx="176" ry="9" fill="#000" opacity=".25"/>
       <g class="rock">
         <!-- armchair -->
         <path d="M58 440 L64 160 Q66 62 200 62 Q334 62 336 160 L342 440Z" fill="#5b3350"/>
         <path d="M84 440 L88 170 Q92 90 200 90 Q308 90 312 170 L316 440Z" fill="#6e4162"/>
         <g fill="#7c4b6f" opacity=".55"><circle cx="150" cy="140" r="4"/><circle cx="250" cy="140" r="4"/><circle cx="200" cy="118" r="4"/><circle cx="118" cy="200" r="4"/><circle cx="282" cy="200" r="4"/></g>
-        <!-- body -->
-        <path d="M104 440 Q100 318 146 280 Q200 256 254 280 Q300 318 296 440Z" fill="#8f6da3"/>
-        <path d="M132 292 Q200 250 268 292 L250 356 Q200 392 150 356Z" fill="#ecd3a8"/>
-        <path d="M150 356 Q200 392 250 356" fill="none" stroke="#d6b582" stroke-width="5" stroke-dasharray="2 7" stroke-linecap="round"/>
-        <path d="M176 266 Q200 290 224 266 L216 250 H184Z" fill="#fbf6ee"/>
-        <rect x="184" y="232" width="32" height="34" rx="12" fill="#eab995"/>
+        <path class="chair-light" d="M58 440 L64 160 Q66 62 200 62 L200 440Z" fill="url(#chair-light)"/>
+        <!-- body: it breathes -->
+        <g class="breath">
+          <path d="M104 440 Q100 318 146 280 Q200 256 254 280 Q300 318 296 440Z" fill="#8f6da3"/>
+          <path d="M104 440 Q100 318 146 280 Q160 273 172 270 Q128 330 132 440Z" fill="#7f5e93" opacity=".55"/>
+          <path d="M132 292 Q200 250 268 292 L250 356 Q200 392 150 356Z" fill="#ecd3a8"/>
+          <path d="M132 292 Q200 250 268 292 L262 312 Q200 272 138 312Z" fill="#f4e2bf"/>
+          <path d="M150 356 Q200 392 250 356" fill="none" stroke="#d6b582" stroke-width="5" stroke-dasharray="2 7" stroke-linecap="round"/>
+          <rect x="184" y="232" width="32" height="34" rx="12" fill="#eab995"/>
+          <path d="M184 252 Q200 262 216 252 L216 262 Q200 270 184 262Z" fill="#d9a783" opacity=".6"/>
+          <path d="M176 266 Q200 290 224 266 L216 250 H184Z" fill="#fbf6ee"/>
+          <ellipse cx="200" cy="281" rx="6.500" ry="5" fill="#c9a24a"/><ellipse cx="200" cy="281" rx="3.500" ry="2.600" fill="#7fb3a6"/>
+        </g>
         <!-- head -->
-        <g id="head">
+        <g class="breath-head"><g id="head">
           <ellipse cx="200" cy="168" rx="74" ry="66" fill="#efeaf2"/>
           <circle cx="200" cy="92" r="27" fill="#efeaf2"/>
-          <path d="M184 84 Q200 72 216 84" fill="none" stroke="#d5cddc" stroke-width="3" stroke-linecap="round"/>
+          <path d="M184 84 Q200 72 216 84 M190 98 Q200 90 210 98" fill="none" stroke="#d5cddc" stroke-width="3" stroke-linecap="round"/>
           <circle cx="137" cy="194" r="10" fill="#eab995"/><circle cx="263" cy="194" r="10" fill="#eab995"/>
-          <ellipse cx="200" cy="186" rx="62" ry="68" fill="#f3cfae"/>
+          <circle cx="137" cy="207" r="3.400" fill="#fbf6ee"/><circle cx="263" cy="207" r="3.400" fill="#fbf6ee"/>
+          <ellipse cx="200" cy="186" rx="62" ry="68" fill="url(#face-shade)"/>
           <path d="M139 182 Q146 116 200 114 Q254 116 261 182 Q244 138 200 137 Q156 138 139 182Z" fill="#efeaf2"/>
+          <path d="M150 150 Q170 128 200 128 M250 150 Q232 130 212 128 M144 170 Q150 150 162 142" fill="none" stroke="#dcd4e2" stroke-width="2" stroke-linecap="round"/>
+          <path d="M174 152 Q200 146 226 152 M180 144 Q200 139 220 144" fill="none" stroke="#e3b48f" stroke-width="1.500" stroke-linecap="round" opacity=".7"/>
           <circle cx="163" cy="214" r="13" fill="#f0a39a" opacity=".45"/><circle cx="237" cy="214" r="13" fill="#f0a39a" opacity=".45"/>
-          <path d="M160 168 Q175 160 190 167 M210 167 Q225 160 240 168" fill="none" stroke="#c9c0d1" stroke-width="4" stroke-linecap="round"/>
+          <g id="brows"><path d="M160 168 Q175 160 190 167 M210 167 Q225 160 240 168" fill="none" stroke="#c9c0d1" stroke-width="4" stroke-linecap="round"/></g>
           <g id="eyes">
             <g class="eye"><ellipse cx="176" cy="190" rx="5" ry="6.500" fill="#3a2a35"/><circle cx="178" cy="188" r="1.600" fill="#fff"/></g>
             <g class="eye"><ellipse cx="224" cy="190" rx="5" ry="6.500" fill="#3a2a35"/><circle cx="226" cy="188" r="1.600" fill="#fff"/></g>
           </g>
           <path class="lids" d="M168 190 Q176 196 184 190 M216 190 Q224 196 232 190" fill="none" stroke="#3a2a35" stroke-width="3" stroke-linecap="round"/>
-          <path d="M162 200 Q157 204 154 201 M238 200 Q243 204 246 201" fill="none" stroke="#d9a783" stroke-width="2" stroke-linecap="round"/>
+          <path d="M167 200 Q176 204 185 200 M215 200 Q224 204 233 200" fill="none" stroke="#e0b08c" stroke-width="1.600" stroke-linecap="round"/>
+          <path d="M162 200 Q157 204 154 201 M238 200 Q243 204 246 201 M158 195 Q153 197 151 194 M242 195 Q247 197 249 194" fill="none" stroke="#d9a783" stroke-width="2" stroke-linecap="round"/>
           <g id="glasses">
           <g fill="rgba(255,255,255,.14)" stroke="#b8893b" stroke-width="3"><circle cx="176" cy="191" r="20"/><circle cx="224" cy="191" r="20"/></g>
+          <path d="M163 180 Q170 174 178 174 M211 180 Q218 174 226 174" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity=".5"/>
           <path d="M196 189 Q200 185 204 189 M156 189 L140 184 M244 189 L260 184" fill="none" stroke="#b8893b" stroke-width="3" stroke-linecap="round"/>
           </g>
           <path d="M200 198 Q193 214 203 216" fill="none" stroke="#d9a07c" stroke-width="3" stroke-linecap="round"/>
+          <path d="M180 220 Q175 230 181 240 M220 220 Q225 230 219 240" fill="none" stroke="#e0b08c" stroke-width="1.800" stroke-linecap="round"/>
           <g id="mouth">
             <path class="m-closed" d="M183 231 Q200 245 217 231" fill="none" stroke="#a4545a" stroke-width="3.500" stroke-linecap="round"/>
-            <ellipse class="m-open1" cx="200" cy="236" rx="10" ry="5" fill="#7a2f3a"/>
-            <ellipse class="m-open2" cx="200" cy="237" rx="11" ry="9" fill="#7a2f3a"/>
-            <path class="m-o" d="M192 236a8 7 0 1 0 16 0a8 7 0 1 0-16 0" fill="#7a2f3a"/>
+            <g class="m-open1"><ellipse cx="200" cy="236" rx="10" ry="5" fill="#7a2f3a"/><path d="M193 233 H207 V235 H193Z" fill="#fbf6ee"/></g>
+            <g class="m-open2"><ellipse cx="200" cy="237" rx="11" ry="9" fill="#7a2f3a"/><path d="M192 231 H208 V234 H192Z" fill="#fbf6ee"/><ellipse cx="200" cy="243" rx="6" ry="3" fill="#c96a70"/></g>
+            <g class="m-o"><path d="M192 236a8 7 0 1 0 16 0a8 7 0 1 0-16 0" fill="#7a2f3a"/></g>
           </g>
-        </g>
+        </g></g>
         <!-- armrests -->
         <rect x="44" y="318" width="74" height="130" rx="30" fill="#6e4162"/><rect x="282" y="318" width="74" height="130" rx="30" fill="#6e4162"/>
+        <path d="M52 340 Q80 322 110 340" fill="none" stroke="#7c4b6f" stroke-width="4" stroke-linecap="round" opacity=".7"/><path d="M290 340 Q318 322 348 340" fill="none" stroke="#7c4b6f" stroke-width="4" stroke-linecap="round" opacity=".7"/>
         <!-- lap blanket -->
         <path d="M100 440 Q104 398 200 404 Q296 398 300 440Z" fill="url(#plaid)"/>
-        <!-- story room: open book -->
+        <!-- story room: her arms and the open book -->
         <g class="prop-book">
+          <path d="M120 300 Q92 350 114 394 L140 398 Q126 350 148 306Z" fill="#7f5e93"/><path d="M280 300 Q308 350 286 394 L260 398 Q274 350 252 306Z" fill="#7f5e93"/>
           <path d="M126 362 L200 376 L274 362 L276 414 L200 428 L124 414Z" fill="#7b4a2d"/>
           <path d="M132 358 L200 372 L200 420 L132 406Z" fill="#fbf3e2"/><path d="M268 358 L200 372 L200 420 L268 406Z" fill="#f4e9d2"/>
           <g stroke="#cbb994" stroke-width="2" stroke-linecap="round"><path d="M142 372l48 9M142 382l48 9M142 392l40 8M258 372l-48 9M258 382l-48 9M258 392l-36 7"/></g>
           <path class="page-flip" d="M268 358 L200 372 L200 420 L268 406Z" fill="#fffaf0" stroke="#e3d6b8" stroke-width="1"/>
           <ellipse cx="128" cy="392" rx="15" ry="12" fill="#f3cfae"/><ellipse cx="272" cy="392" rx="15" ry="12" fill="#f3cfae"/>
+          <path d="M120 386 q8 -4 15 0 M266 386 q8 -4 15 0" fill="none" stroke="#e0b08c" stroke-width="1.600" stroke-linecap="round"/>
         </g>
         <!-- tea room: cup, and the closed book put aside -->
         <g class="prop-tea">
           <g transform="rotate(-8 318 322)"><rect x="290" y="306" width="58" height="16" rx="3" fill="#7b4a2d"/><rect x="293" y="309" width="52" height="10" fill="#fbf3e2"/><path d="M312 306v16" stroke="#c0392b" stroke-width="3"/></g>
+          <path d="M120 300 Q98 346 132 384 L152 372 Q130 346 148 306Z" fill="#7f5e93"/><path d="M280 300 Q302 346 268 384 L248 372 Q270 346 252 306Z" fill="#7f5e93"/>
           <g class="cup">
           <ellipse cx="200" cy="408" rx="46" ry="9" fill="#fbf6ee"/>
           <path d="M168 366 H232 Q232 404 200 406 Q168 404 168 366Z" fill="#fff"/>
@@ -127,8 +155,24 @@
           <path d="M232 374 Q252 376 248 390 Q244 400 228 396" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round"/>
           <ellipse cx="200" cy="367" rx="32" ry="5" fill="#b9793f"/>
           <g class="steam" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".6"><path d="M188 352 q-6 -10 0 -18 q6 -8 0 -16"/><path d="M204 350 q-6 -10 0 -18 q6 -8 0 -18"/><path d="M218 354 q-5 -9 0 -16 q5 -7 0 -14"/></g>
+          <ellipse cx="146" cy="384" rx="13" ry="9" fill="#7f5e93"/><ellipse cx="254" cy="386" rx="12" ry="8" fill="#7f5e93"/>
           <ellipse cx="160" cy="392" rx="15" ry="12" fill="#f3cfae"/><ellipse cx="240" cy="394" rx="13" ry="11" fill="#f3cfae"/>
           </g>
+        </g>
+        <!-- her cat, asleep on the armrest -->
+        <g class="cat">
+          <path class="cat-tail" d="M52 316 Q30 318 34 302 Q38 290 52 296" fill="none" stroke="#8a8590" stroke-width="9" stroke-linecap="round"/>
+          <g class="cat-body"><ellipse cx="80" cy="306" rx="34" ry="17" fill="#9a95a1"/>
+            <path d="M62 294 q4 8 0 16 M74 291 q4 9 0 18 M86 292 q4 8 0 17" fill="none" stroke="#7d7884" stroke-width="3" stroke-linecap="round" opacity=".7"/></g>
+          <g class="cat-head">
+            <path class="cat-ear" d="M94 292 L96 276 L106 288Z" fill="#9a95a1"/><path class="cat-ear ear2" d="M110 288 L120 277 L121 293Z" fill="#9a95a1"/>
+            <ellipse cx="108" cy="300" rx="15" ry="12" fill="#a39eaa"/>
+            <path class="cat-closed" d="M100 300 q4 3 7 0 M111 300 q4 3 7 0" fill="none" stroke="#3a2a35" stroke-width="1.800" stroke-linecap="round"/>
+            <g class="cat-open"><ellipse cx="103.500" cy="299" rx="3" ry="3.400" fill="#d9c25a"/><ellipse cx="114.500" cy="299" rx="3" ry="3.400" fill="#d9c25a"/><ellipse cx="103.500" cy="299" rx="1" ry="2.800" fill="#2a2030"/><ellipse cx="114.500" cy="299" rx="1" ry="2.800" fill="#2a2030"/></g>
+            <path d="M107.500 304 l1.500 1.800 l1.500 -1.800Z" fill="#d98c7a"/>
+            <path d="M96 305 h-9 M96 308 l-8 3 M122 305 h9 M122 308 l8 3" stroke="#e9e4ec" stroke-width="1" stroke-linecap="round" opacity=".8"/>
+          </g>
+          <ellipse cx="96" cy="318" rx="9" ry="5" fill="#a39eaa"/>
         </g>
         <g class="zzz" fill="#f6e7c8" font-family="Georgia,serif" font-style="italic"><text x="268" y="120" font-size="22">z</text><text x="286" y="98" font-size="28">z</text><text x="308" y="70" font-size="34">z</text></g>
       </g>
@@ -207,7 +251,7 @@
 <div id="pop" class="pop" hidden></div>
 <div id="toast" class="toast" hidden></div>
 
-<script type="importmap">{"imports":{"./js/app.js":"./js/app.js?v=5c5e415dba","./js/book.js":"./js/book.js?v=8ad99101aa","./js/ears.js":"./js/ears.js?v=2a42d3dac9","./js/format.js":"./js/format.js?v=fab0599fe6","./js/neural-worker.js":"./js/neural-worker.js?v=43792d94e3","./js/neural.js":"./js/neural.js?v=8f1e2e2018","./js/panels.js":"./js/panels.js?v=8cfcaf5850","./js/sounds.js":"./js/sounds.js?v=c926839b59","./js/store.js":"./js/store.js?v=cbfe6a4033","./js/story.js":"./js/story.js?v=c37749b17a","./js/tea.js":"./js/tea.js?v=6d4078525f","./js/voice.js":"./js/voice.js?v=1a7dec9fd3","./js/words.js":"./js/words.js?v=1825eaa407"}}</script>
-<script type="module" src="./js/app.js?v=5c5e415dba"></script>
+<script type="importmap">{"imports":{"./js/alive.js":"./js/alive.js?v=1371ff1d55","./js/app.js":"./js/app.js?v=f3777c05ee","./js/book.js":"./js/book.js?v=8ad99101aa","./js/ears.js":"./js/ears.js?v=2a42d3dac9","./js/format.js":"./js/format.js?v=fab0599fe6","./js/neural-worker.js":"./js/neural-worker.js?v=43792d94e3","./js/neural.js":"./js/neural.js?v=8f1e2e2018","./js/panels.js":"./js/panels.js?v=8cfcaf5850","./js/sounds.js":"./js/sounds.js?v=c926839b59","./js/store.js":"./js/store.js?v=cbfe6a4033","./js/story.js":"./js/story.js?v=c37749b17a","./js/tea.js":"./js/tea.js?v=6d4078525f","./js/voice.js":"./js/voice.js?v=1a7dec9fd3","./js/words.js":"./js/words.js?v=1825eaa407"}}</script>
+<script type="module" src="./js/app.js?v=f3777c05ee"></script>
 </body>
 </html>

@@ -8,6 +8,7 @@ import { SWITCH, ago } from './format.js';
 import { lookup, matchingLine } from './words.js';
 import * as sounds from './sounds.js';
 import * as neural from './neural.js';
+import * as alive from './alive.js';
 import { initPanels, openSheet, closeSheet, sheetOpen } from './panels.js';
 
 const $ = s => document.querySelector(s);
@@ -118,6 +119,7 @@ async function say(text, lang, meta = {}) {
   markTexts(meta, lang);
   S.speaking = true; S.speakingText = text;
   body.classList.add('speaking'); body.classList.remove('listening');
+  alive.spoke(text, meta);
   // While she tells the story, the picture is the stage and she sits small beside it.
   // When she speaks to me directly, she comes forward again.
   if (meta.seq) body.classList.toggle('stage-picture', !!S.hasPicture);
@@ -338,6 +340,7 @@ function ambience() { sounds.ambience(S.awake ? S.room : 'off', S.time || timeOf
 // ---------- rooms ----------
 function setRoom(room) {
   S.room = room;
+  alive.stir(5200);
   if (room === 'tea') body.classList.remove('stage-picture');
   body.classList.toggle('room-tea', room === 'tea');
   body.classList.toggle('room-story', room === 'story');
@@ -428,6 +431,7 @@ function showHeard(text) {
 }
 function onHeard(text, cmd) {
   clearTimeout(S.soundTimer);
+  alive.stir();
   showHeard(text);
   if (!S.awake) { wake(); return; }
   if (cmd === 'tea' || cmd === 'story') { act(cmd); return; }
@@ -663,6 +667,7 @@ async function wake() {
   if (S.awake) return;
   S.awake = true;
   voice.unlock(); sounds.unlock(); neural.unlock(); warmVoices(); ambience();
+  alive.stir(3600);
   body.classList.remove('asleep');
   await voice.whenVoicesReady();
   if (cfg.mic && !ears.on) ears.start(cfg.micLang);
@@ -736,19 +741,7 @@ function wire() {
   const measure = () => { const r = document.documentElement.style; r.setProperty('--ctl-h', $('#controls').offsetHeight + 'px'); r.setProperty('--top-h', $('#top').offsetHeight + 'px'); };
   measure(); window.addEventListener('resize', measure); const ro = new ResizeObserver(measure); ro.observe($('#controls')); ro.observe($('#top'));
 
-  // Her eyes follow you a little.
-  const eyes = $('#eyes');
-  let eyeFrame = 0, eyeAt = null;
-  window.addEventListener('pointermove', e => {
-    eyeAt = e;
-    if (eyeFrame) return;
-    eyeFrame = requestAnimationFrame(() => {
-      eyeFrame = 0;
-      const r = $('#grandma').getBoundingClientRect();
-      const dx = (eyeAt.clientX - (r.left + r.width / 2)) / window.innerWidth, dy = (eyeAt.clientY - (r.top + r.height * .42)) / window.innerHeight;
-      eyes.style.transform = `translate(${Math.max(-3, Math.min(3, dx * 8)).toFixed(1)}px, ${Math.max(-2, Math.min(2.5, dy * 6)).toFixed(1)}px)`;
-    });
-  }, { passive: true });
+  alive.init();
 
   store.onChange(ev => {
     if (ev.type === 'sync') { syncBadge(); if (ev.pulled) { if (!story.journey) boot(true); else refresh(); } }
