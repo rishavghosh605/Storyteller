@@ -545,7 +545,7 @@ async function renderSettings(el) {
       <div class="kv">
         <label>Room sounds</label><div class="row"><input id="st-level" type="range" min="0" max="1" step="0.05" value="${level}"><span class="hint" id="st-level-word">${loud(level)}</span></div>
       </div>
-      <p class="hint">A fire, a clock, a page turning, a teacup. All the way left is off.</p>
+      <p class="hint">A fire, a page turning, a teacup. All the way left is off.</p>
       <p><label class="check"><input type="checkbox" id="st-drift" ${s.drift ? 'checked' : ''}> The picture moves very slowly while she tells</label></p>`)}
     ${fold('talk', 'Talking with Grandma', `${s.waitForMe ? 'she waits for me' : 'she goes on by herself'} · I speak ${s.micLang.startsWith('de') ? 'German' : 'English'}`, `
       ${earsSupported ? '' : '<div class="note warn">This browser cannot listen. Use Chrome, Edge or Safari for voice. The buttons do everything too.</div>'}
