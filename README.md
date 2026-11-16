@@ -59,7 +59,7 @@ Grandma breathes, blinks at uneven moments, looks at the picture, at her book an
 
 The bar at the bottom shows the six things you use most: Sentence, Play, And then?, Teatime, Texts and **More**. More opens a small tray with Mic, Cloud, Meanings, Slow German, Part again and Last one; a dot on it shows when one of them is switched on.
 
-**On a new device:** under My journey, My books, paste the GitHub token of your library into "I already have my journeys". The app finds the library by itself and fetches your books, your place and your pictures.
+**On a new device:** under My journey, My books, paste the GitHub token of your library into "I already have my journeys". The app finds the library by itself and fetches your books, your place and your pictures. The same box works at any time to switch to another library: the saving settings are changed for you, and the app asks before it replaces what is on the device.
 
 ## Where things are saved
 

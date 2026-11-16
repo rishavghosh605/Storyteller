@@ -77,6 +77,24 @@ async function dropRec(path) {
   await tx('files', 'readwrite', s => s.delete(path));
   (await index()).delete(path);
 }
+// Forget every journey on this device (texts, pictures, places), so another library can take their place.
+// Book files that were read on this device stay, and so do the settings.
+export async function forgetJourneys() {
+  const idx = await index();
+  for (const path of [...idx.keys()]) if (!path.startsWith('local/')) await dropRec(path);
+  emit({ type: 'del', path: 'journeys/' });
+}
+// How many journeys are on this device, and how many of their files have never reached a library.
+export async function onDevice() {
+  const idx = await index();
+  let journeys = 0, unsaved = 0;
+  for (const [path, m] of idx) {
+    if (path.startsWith('local/') || m.deleted) continue;
+    if (/^journeys\/[^/]+\/journey\.json$/.test(path)) journeys++;
+    if (m.dirty || !m.tag) unsaved++;
+  }
+  return { journeys, unsaved };
+}
 export async function getRec(path) { return tx('files', 'readonly', s => s.get(path)); }
 export async function get(path) {
   const r = await getRec(path);
