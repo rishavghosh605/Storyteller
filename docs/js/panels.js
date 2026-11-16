@@ -15,6 +15,7 @@ let pendingBook = null;
 let shownTab = '';
 let openFold = '';
 let offNeural = null;
+const tocOpen = { book: '', keys: new Set() }; // which chapters are unfolded in Contents
 let afterClose = null; // something to do once the sheet is closed (for example: greet again after an import)
 const GROUPS = {
   journey: [['contents', 'Contents'], ['books', 'My books']],
@@ -156,25 +157,69 @@ async function renderContents(el) {
   const p = ctx.story.p;
   const curIdx = ctx.story.index(p.seq);
   const chapterOf = q => { let c = -1; chapters.forEach((ch, k) => { if (q.pages && ch.page <= q.pages[0]) c = k; }); return c; };
-  let html = '', last = null;
+  // Groups: the book's chapters, or tens of parts when the chapters are not known.
+  const groups = [];
   for (const q of seqs) {
-    const k = chapters.length ? chapterOf(q) : null;
-    if (chapters.length && k !== last) { html += `<h3>${esc(k < 0 ? 'Before the first chapter' : chapters[k].title)}</h3>`; last = k; }
-    const i = ctx.story.index(q.n);
-    const state = curIdx < 0 || i < curIdx ? 'told' : i === curIdx ? 'now' : 'later';
-    const img = await ctx.imageURL(await store.imagePath(j.id, q.n));
-    const pages = q.pages ? (q.pages[0] === q.pages[1] ? `p. ${q.pages[0]}` : `pp. ${q.pages[0]} to ${q.pages[1]}`) : '';
-    html += `<button class="toc-row ${state}" data-n="${q.n}" title="Hear this part">
-      ${img ? `<img class="toc-thumb" src="${img}" alt="">` : '<span class="toc-thumb" data-icon="pencil"></span>'}
-      <span><span class="toc-t">${q.n}. ${esc(q.title?.en || 'Part ' + q.n)}<small>${esc(q.title?.de || '')}</small></span>
-        ${state !== 'later' && q.recap ? `<span class="toc-d">${esc(q.recap)}</span>` : ''}</span>
-      <span class="toc-s">${state === 'now' ? '▶ you are here' : state === 'told' ? '✓ told' : 'not told yet'}${pages ? ' · ' + pages : ''}</span>
-    </button>`;
+    const key = chapters.length ? chapterOf(q) : Math.floor((q.n - 1) / 10);
+    let g = groups[groups.length - 1];
+    if (!g || g.key !== key) {
+      const title = chapters.length ? (key < 0 ? 'Before the first chapter' : chapters[key].title) : `Parts ${Math.floor((q.n - 1) / 10) * 10 + 1} to ${Math.floor((q.n - 1) / 10) * 10 + 10}`;
+      groups.push(g = { key, title, parts: [] });
+    }
+    g.parts.push(q);
   }
+  const stateOf = q => { const i = ctx.story.index(q.n); return curIdx < 0 || i < curIdx ? 'told' : i === curIdx ? 'now' : 'later'; };
+  const here = groups.find(g => g.parts.some(q => stateOf(q) === 'now')) || groups[groups.length - 1];
+  // Which groups are open is remembered per book while the app is open. At first only "where I am" is open.
+  if (tocOpen.book !== j.id) { tocOpen.book = j.id; tocOpen.keys = new Set([here.key]); }
+  const rows = async g => {
+    let html = '';
+    for (const q of g.parts) {
+      const state = stateOf(q);
+      const img = await ctx.imageURL(await store.imagePath(j.id, q.n));
+      const pages = q.pages ? (q.pages[0] === q.pages[1] ? `p. ${q.pages[0]}` : `pp. ${q.pages[0]} to ${q.pages[1]}`) : '';
+      html += `<button class="toc-row ${state}" data-n="${q.n}" title="Hear this part">
+        ${img ? `<img class="toc-thumb" src="${img}" alt="" loading="lazy">` : '<span class="toc-thumb" data-icon="pencil"></span>'}
+        <span><span class="toc-t">${q.n}. ${esc(q.title?.en || 'Part ' + q.n)}<small>${esc(q.title?.de || '')}</small></span>
+          ${state !== 'later' && q.recap ? `<span class="toc-d">${esc(q.recap)}</span>` : ''}</span>
+        <span class="toc-s">${state === 'now' ? '▶ you are here' : state === 'told' ? '✓ told' : 'not told yet'}${pages ? ' · ' + pages : ''}</span>
+      </button>`;
+    }
+    return html;
+  };
+  const summary = g => {
+    const told = g.parts.filter(q => stateOf(q) === 'told').length, n = g.parts.length;
+    const a = g.parts[0].pages?.[0], b = g.parts[n - 1].pages?.[1];
+    const bits = [`${n} ${n === 1 ? 'part' : 'parts'}`, told === n ? 'all told' : told ? `${told} told` : 'not told yet'];
+    if (a) bits.push(a === b ? `p. ${a}` : `pp. ${a} to ${b}`);
+    return bits.join(' · ');
+  };
+  let html = '';
+  for (const g of groups) {
+    const open = tocOpen.keys.has(g.key);
+    html += `<details class="fold toc-fold ${g === here ? 'here' : ''}" data-key="${g.key}" ${open ? 'open' : ''}>
+      <summary><b>${esc(g.title)}</b><span>${g === here ? '▶ you are here · ' : ''}${summary(g)}</span></summary>
+      <div class="fold-body">${open ? await rows(g) : ''}</div></details>`;
+  }
+  const many = groups.length > 2;
   el.innerHTML = `<h2>Contents of “${esc(j.title)}”</h2>
     <p class="hint">Tap a part to hear it. What a part is about appears once Grandma has told it, so nothing is given away.${chapters.length ? '' : ' Attach the book file under My books to see the chapters here.'}</p>
+    ${many ? `<div class="row toc-tools"><button class="btn" id="toc-here">Where I am</button><button class="btn" id="toc-all">${tocOpen.keys.size >= groups.length ? 'Close all' : 'Open all'}</button></div>` : ''}
     <div class="toc">${html}</div>`;
-  el.querySelectorAll('.toc-row').forEach(b => { b.onclick = () => ctx.goPart(+b.dataset.n); });
+  const wire = root => root.querySelectorAll('.toc-row').forEach(b => { b.onclick = () => ctx.goPart(+b.dataset.n); });
+  wire(el);
+  // A chapter's parts are only drawn when it is opened, so a long book stays light.
+  el.querySelectorAll('.toc-fold').forEach(d => {
+    const g = groups.find(x => String(x.key) === d.dataset.key);
+    d.ontoggle = async () => {
+      if (d.open) { tocOpen.keys.add(g.key); const body = d.querySelector('.fold-body'); if (!body.children.length) { body.innerHTML = await rows(g); ctx.paintIcons(body); wire(body); } }
+      else tocOpen.keys.delete(g.key);
+      if ($('#toc-all')) $('#toc-all').textContent = tocOpen.keys.size >= groups.length ? 'Close all' : 'Open all';
+    };
+  });
+  const goHere = () => { const d = el.querySelector('.toc-fold.here'); if (!d) return; d.open = true; setTimeout(() => (d.querySelector('.toc-row.now') || d).scrollIntoView({ block: 'center', behavior: 'smooth' }), 60); };
+  if ($('#toc-here')) $('#toc-here').onclick = goHere;
+  if ($('#toc-all')) $('#toc-all').onclick = () => { const openAll = tocOpen.keys.size < groups.length; el.querySelectorAll('.toc-fold').forEach(d => { d.open = openAll; }); };
   if (shownTab !== 'contents') requestAnimationFrame(() => el.querySelector('.toc-row.now')?.scrollIntoView({ block: 'center' }));
 }
 

@@ -448,3 +448,10 @@ body.room-tea .vignette { background: radial-gradient(ellipse at 40% 55%, rgba(0
 .tray .ctl small { display: block; }
 #btn-more[aria-expanded=true] { background: color-mix(in srgb, var(--text-on-wall) 22%, transparent); }
 @media (max-width: 820px) { .tray { right: 8px; left: 8px; max-width: none; display: grid; grid-template-columns: repeat(3, 1fr); } .tray .ctl { min-width: 0; height: 54px; } body.room-tea .tray { grid-template-columns: repeat(3, 1fr); } }
+
+/* ---------- contents that fold by chapter ---------- */
+.toc-fold > summary b { font: 600 16.500px var(--serif); white-space: normal; }
+.toc-fold.here { border-color: var(--accent); }
+.toc-fold .fold-body { padding: 6px 10px 10px; }
+.toc-tools { margin: 4px 0 2px; }
+.settings-only-one {}
