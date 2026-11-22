@@ -9,6 +9,7 @@ import { lookup, matchingLine } from './words.js';
 import * as sounds from './sounds.js';
 import * as neural from './neural.js';
 import * as alive from './alive.js';
+import * as practice from './practice.js';
 import { initPanels, openSheet, closeSheet, sheetOpen } from './panels.js';
 
 const $ = s => document.querySelector(s);
@@ -35,6 +36,7 @@ const ICONS = {
   left: '<path d="M15 5l-7 7 7 7"/>', right: '<path d="M9 5l7 7-7 7"/>', close: '<path d="M6 6l12 12M18 6L6 18"/>',
   swap: '<path d="M4 8h14l-3-3M20 16H6l3 3"/>', send: '<path d="M4 12l16-8-6 16-3-6z"/>',
   more: '<circle cx="6" cy="12" r="1.600" fill="currentColor"/><circle cx="12" cy="12" r="1.600" fill="currentColor"/><circle cx="18" cy="12" r="1.600" fill="currentColor"/>',
+  sound: '<path d="M4 9v6h4l5 4V5L8 9H4zM16 9a4 4 0 0 1 0 6M18.500 6.500a8 8 0 0 1 0 11"/>',
   moon: '<path d="M20 14.500A8 8 0 1 1 9.500 4a6.500 6.500 0 0 0 10.500 10.500z"/>',
   pencil: '<path d="M4 20l1-5L16 4l4 4L9 19zM14 6l4 4"/>',
 };
@@ -134,13 +136,14 @@ async function say(text, lang, meta = {}) {
     const part = parts[k];
     const base = offset;
     const voiceName = de ? cfg.voiceDe : cfg.voiceEn;
-    const rate = de ? cfg.rateDe * (cfg.slowDe ? 0.72 : 1) : cfg.rateEn;
+    const slow = de && (cfg.slowDe || meta.slow);
+    const rate = de ? cfg.rateDe * (slow ? 0.72 : 1) : cfg.rateEn;
     const n = neural.parse(voiceName);
     r = 'fallback';
     if (n && neural.ENGINES[n.engine].lang === lang) {
       if (k === 0) parts.slice(1).forEach(x => prepare(x, lang)); // her other sentences are made while the first one plays
       if (neural.state[n.engine].state === 'ready' && !S.waitingDots) { S.waitingDots = setTimeout(() => { if (id === S.sayId) $('#cloud-dots').hidden = false; }, 450); }
-      r = await neural.speak(part, { ...n, rate, slow: de && cfg.slowDe, onWord: i => revealWord(base + i), onLevel: mouthLevel, onStart: () => { mouthByLevel = true; clearTimeout(S.waitingDots); S.waitingDots = null; $('#cloud-dots').hidden = true; } });
+      r = await neural.speak(part, { ...n, rate, slow, onWord: i => revealWord(base + i), onLevel: mouthLevel, onStart: () => { mouthByLevel = true; clearTimeout(S.waitingDots); S.waitingDots = null; $('#cloud-dots').hidden = true; } });
       clearTimeout(S.waitingDots); S.waitingDots = null; mouthByLevel = false;
       if (id === S.sayId) $('#cloud-dots').hidden = true;
     }
@@ -344,16 +347,28 @@ function ambience() { sounds.ambience(S.awake ? S.room : 'off', S.time || timeOf
 
 // ---------- rooms ----------
 function setRoom(room) {
+  const prev = S.room;
   S.room = room;
   alive.stir(5200);
-  if (room === 'tea') body.classList.remove('stage-picture');
+  if (room !== 'story') body.classList.remove('stage-picture');
   body.classList.toggle('room-tea', room === 'tea');
   body.classList.toggle('room-story', room === 'story');
-  $('#room-label').textContent = room === 'tea' ? SWITCH.story : SWITCH.tea;
-  $('#btn-room').querySelector('[data-icon]').innerHTML = icon(room === 'tea' ? 'book' : 'tea');
+  body.classList.toggle('room-sounds', room === 'sounds');
+  $('#room-label').textContent = room === 'story' ? SWITCH.tea : SWITCH.story;
+  $('#btn-room').querySelector('[data-icon]').innerHTML = icon(room === 'story' ? 'tea' : 'book');
   ambience();
-  $('#btn-room').title = room === 'tea' ? `Back to the story (say "${SWITCH.story}")` : `Put the book down and chat (say "${SWITCH.tea}")`;
+  $('#btn-room').title = room === 'story' ? `Put the book down and chat (say "${SWITCH.tea}")` : `Back to the story (say "${SWITCH.story}")`;
+  // The microphone belongs to the sound corner while it is open (it records you there).
+  if (prev === 'sounds' && room !== 'sounds') { hush(); practice.close(); if (cfg.mic && earsSupported && !ears.on) ears.start(cfg.micLang); updateControls(); }
+  if (room === 'sounds' && prev !== 'sounds' && ears.on) { ears.stop(); updateControls(); }
   updateTop();
+}
+async function enterSounds() {
+  if (S.room === 'sounds') return;
+  story.pause(); clearAsk(); closeTexts();
+  setRoom('sounds');
+  await practice.open();
+  say(pick(['Ahh, the sounds of German. Good idea, dear. Pick one, or start with today\'s three.', 'Hmm, yes. A little practice for the mouth. Choose a sound, and I will say it with you.']), 'en', { drill: true });
 }
 async function enterTea() {
   if (S.room === 'tea') return;
@@ -390,7 +405,10 @@ async function teaHear(text) {
 
 // ---------- commands (voice, buttons and keys all end up here) ----------
 function act(cmd) {
+  // In the sound corner only the room changes are meant: Space, the arrows and spoken commands must not start the story.
+  if (S.room === 'sounds' && cmd !== 'tea' && cmd !== 'story' && cmd !== 'sounds') return;
   switch (cmd) {
+    case 'sounds': return enterSounds();
     case 'tea': return enterTea();
     case 'story': return enterStory();
     case 'toggle':
@@ -440,6 +458,7 @@ function onHeard(text, cmd) {
   showHeard(text);
   if (!S.awake) { wake(); return; }
   if (cmd === 'tea' || cmd === 'story') { act(cmd); return; }
+  if (S.room === 'sounds') return;
   if (sheetOpen()) return;
   if (S.speaking) {
     // While she speaks, only a few safe commands count, and never her own echo.
@@ -557,6 +576,32 @@ async function showMeaning(el, n) {
   if (hit.meaning || hit.context) keepWord(el, hit, seq);
 }
 
+// ---------- words for the sound corner ----------
+// The words of the parts you have heard (the lists Claude wrote with them), so that examples can
+// come from your own story. The sound corner works without any of it.
+function soundVocab() {
+  const cur = story.index(story.p.seq);
+  const heard = story.seqs.slice(0, cur < 0 ? story.seqs.length : cur + 1);
+  const freq = new Map();
+  for (const sq of heard) for (const line of sq.de || []) for (const t of line.toLowerCase().match(/\p{L}+/gu) || []) freq.set(t, (freq.get(t) || 0) + 1);
+  const out = new Map();
+  const add = (word, en, n, noun) => {
+    word = (word || '').trim().replace(/^(der|die|das|ein|eine)\s+/i, '');
+    if (!/^\p{L}{3,12}$/u.test(word)) return;
+    const k = word.toLowerCase();
+    if (!out.has(k)) out.set(k, { w: noun ? word.charAt(0).toUpperCase() + word.slice(1) : word, en: en || '', n, count: freq.get(k) || 1 });
+  };
+  for (const sq of heard) {
+    for (const nn of sq.nouns || []) add(nn.de, nn.en, sq.n, true);
+    for (const [key, meaning] of Object.entries(sq.words || {})) {
+      const inside = key.match(/\((.*?)\)/)?.[1] || '';
+      const noun = /^(der|die|das)\b/i.test(inside); // the lists are saved in lower case: an article tells which words are nouns
+      [key.replace(/\s*\(.*?\)\s*/g, ''), ...inside.split(/[,/]/)].forEach(f => add(f, meaning, sq.n, noun));
+    }
+  }
+  return [...out.values()];
+}
+
 // ---------- the word jar ----------
 // Every word I tap for its meaning is kept, with the line it came from.
 // It lives in its own file. The tea room reads it; the story never does.
@@ -607,6 +652,7 @@ function updateTop() {
   let place = '';
   if (j && total) place = cur ? `Part ${cur.n} of ${story.seqs[total - 1].n}` : `All ${total} parts told`;
   if (S.room === 'tea') place = 'Tea room · ' + (place || 'free chat');
+  if (S.room === 'sounds') place = 'Sounds';
   $('#top-place').textContent = place; $('#top-place').hidden = !place;
 }
 function updateControls() {
@@ -691,7 +737,8 @@ function wire() {
   $('#btn-repeat').onclick = () => act('repeat');
   $('#btn-repeat-seq').onclick = () => act('repeatSeq');
   $('#btn-slow').onclick = () => { cfg = store.saveSettings({ slowDe: !cfg.slowDe }); updateControls(); toast(cfg.slowDe ? 'German is slower now.' : 'German at her normal pace.'); };
-  $('#btn-room').onclick = () => act(S.room === 'tea' ? 'story' : 'tea');
+  $('#btn-room').onclick = () => act(S.room === 'story' ? 'tea' : 'story');
+  $('#btn-sounds').onclick = () => act('sounds');
   $('#btn-mic').onclick = () => setMic(!(cfg.mic && ears.on));
   $('#btn-cloud').onclick = () => { cfg = store.saveSettings({ cloud: !cfg.cloud }); updateControls(); };
   $('#btn-meanings').onclick = () => { cfg = store.saveSettings({ meanings: !cfg.meanings }); updateControls(); toast(cfg.meanings ? 'Tap any word to see what it means.' : 'Word meanings are off.'); };
@@ -707,7 +754,7 @@ function wire() {
   // The tray stays open while you switch things in it, and closes when you tap anywhere else.
   const tray = on => { $('#more-tray').hidden = !on; $('#btn-more').setAttribute('aria-expanded', String(on)); };
   $('#btn-more').onclick = e => { e.stopPropagation(); tray($('#more-tray').hidden); };
-  $('#more-tray').onclick = e => { e.stopPropagation(); if (e.target.closest('#btn-repeat-seq')) tray(false); };
+  $('#more-tray').onclick = e => { e.stopPropagation(); if (e.target.closest('#btn-repeat-seq, #btn-sounds')) tray(false); };
   // A tap outside the open tray only closes it. It does not also press whatever was underneath.
   document.addEventListener('click', e => {
     if ($('#more-tray').hidden || e.target.closest('#more-tray, #btn-more')) return;
@@ -746,6 +793,7 @@ function wire() {
     if (sheetOpen() || e.metaKey || e.ctrlKey || e.altKey) return;
     if (!S.awake) { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); wake(); } return; }
     const k = e.key.toLowerCase();
+    if (S.room === 'sounds' && (k === 't' || k === 'm')) return;
     if (k === ' ') { e.preventDefault(); act('toggle'); }
     else if (k === 'arrowright') act('next');
     else if (k === 'arrowleft') act('repeat');
@@ -759,6 +807,7 @@ function wire() {
   measure(); window.addEventListener('resize', measure); const ro = new ResizeObserver(measure); ro.observe($('#controls')); ro.observe($('#top'));
 
   alive.init();
+  practice.initPractice({ say, hush, toast, vocab: soundVocab });
 
   store.onChange(ev => {
     if (ev.type === 'sync') { syncBadge(); if (ev.pulled) { if (!story.journey) boot(true); else refresh(); } }

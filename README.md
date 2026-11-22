@@ -55,6 +55,8 @@ While she tells, the picture is the stage and Grandma sits small beside it; when
 
 Grandma breathes, blinks at uneven moments, looks at the picture, at her book and at you, and lifts her eyebrows on a question. Firelight flickers in the room and throws her shadow on the wall, and her cat sleeps on the armrest and looks up when you speak.
 
+**Sounds** (More, then Sounds) is a third room for practising German pronunciation, separate from the story and the tea room. It has 15 sounds (sch, sp/st, z, v/w, s/ß, ie, ei, eu/äu, aa/ah, ü, ö, ä, the two ch sounds and r), each with a plain-English description, three example words, and a contrast pair. Examples come from the parts you have heard when the sound appears in them, and from a built-in list when not, so the room works without the story. A "not right?" button next to a word removes it for good. You can record yourself and hear Grandma and yourself side by side; the browser's speech recogniser gives a rough hint of whether it understood the word. A hearing test plays one of two similar words and you pick which it was. What is still weak is remembered in `practice/sound-progress.json` in your library and comes back first the next time.
+
 **Contents** (the "Part 3 of 18" chip at the top) lists every part under the book's chapters, with its picture and a short description once it has been told. Tap a part to hear it. **Last one** makes the current part the last for tonight: Grandma finishes it, says good night and dozes off.
 
 The bar at the bottom shows the six things you use most: Sentence, Play, And then?, Teatime, Texts and **More**. More opens a small tray with Mic, Cloud, Meanings, Slow German, Part again and Last one; a dot on it shows when one of them is switched on.
