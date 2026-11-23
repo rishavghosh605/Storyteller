@@ -627,6 +627,9 @@ async function renderSettings(el) {
         <label>Depth</label><input id="st-pitch-en" type="range" min="0.6" max="1.2" step="0.05" value="${s.pitchEn}">
         <label>German</label><div class="row"><select id="st-de">${opts('de', s.voiceDe)}</select><button class="btn" data-test="de">Listen</button></div>
         <label></label><span class="hint" id="st-note-de">${esc(neuralNote(s.voiceDe))}</span>
+        <label></label><details id="st-tags"><summary>Try expression tags (German, Supertonic only, experimental)</summary>
+          <p class="hint">Supertone lists &lt;laugh&gt;, &lt;breath&gt; and &lt;sigh&gt; for this voice. Type a sentence with one and press Listen. If you hear the word itself spoken, this version does not support the tag.</p>
+          <div class="row"><input id="st-tagtext" type="text" size="40" value="Ach ja, das war ein langer Tag. &lt;sigh&gt; Aber es war sch&ouml;n. &lt;laugh&gt;"><button class="btn" id="st-tagbtn">Listen</button></div></details>
         <label>Speed</label><input id="st-rate-de" type="range" min="0.5" max="1.05" step="0.05" value="${s.rateDe}">
       </div>
       <details><summary>Tips for a warmer voice</summary>
@@ -700,6 +703,13 @@ async function renderSettings(el) {
       }
     };
   });
+  $('#st-tagbtn').onclick = async () => {
+    const c = store.settings(), n = N.parse(c.voiceDe);
+    if (!n || n.engine !== 'supertonic') { ctx.toast('Choose a Supertonic voice for German first.', 5000); return; }
+    N.unlock(); voice.stop();
+    try { await N.load('supertonic'); } catch { /* the note under the list says why */ }
+    if ((await N.speak($('#st-tagtext').value, { ...n, rate: c.rateDe })) === 'fallback') ctx.toast('The Supertonic voice is not ready yet. See the note under the list.', 5000);
+  };
   $('#st-mic').onchange = e => { save({ micLang: e.target.value }); if (ctx.ears.on) { ctx.ears.stop(); ctx.setMic(true); } };
   $('#st-wait').onchange = e => save({ waitForMe: e.target.checked });
   $('#st-glue').onchange = e => save({ glue: e.target.checked });
